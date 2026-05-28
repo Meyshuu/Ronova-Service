@@ -482,9 +482,21 @@ function renderTopbar() {
 function renderServiceGrid() {
   const grid = document.getElementById('serviceGrid');
   const search = document.getElementById('searchInput').value.toLowerCase();
-  const filtered = db.services.filter((service) =>
-    [service.title, service.category, service.joki, service.description].some((field) => field.toLowerCase().includes(search))
+
+  const services = Array.isArray(db.services) ? db.services : [];
+
+  const filtered = services.filter((service) =>
+    [service.title, service.category, service.joki, service.description].some((field) => String(field || '').toLowerCase().includes(search))
   );
+
+  if (!services.length) {
+    grid.innerHTML = '<p class="body-copy">Tidak ada layanan tersedia.</p>';
+    document.getElementById('pageInfo').textContent = `Halaman 1 / 1`;
+    document.getElementById('prevPageBtn').disabled = true;
+    document.getElementById('nextPageBtn').disabled = true;
+    return;
+  }
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / state.itemsPerPage));
   if (state.currentPage > totalPages) state.currentPage = totalPages;
 
