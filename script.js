@@ -1368,9 +1368,21 @@ function attachEvents() {
     event.preventDefault();
     const title = document.getElementById('ownerServiceTitle').value.trim();
     const category = document.getElementById('ownerServiceCategory').value.trim();
-    const price = document.getElementById('ownerServicePrice').value.trim();
-    const duration = document.getElementById('ownerServiceDuration').value.trim();
+    const priceMin = document.getElementById('ownerServicePriceMin')?.value?.trim() || '';
+    const priceMax = document.getElementById('ownerServicePriceMax')?.value?.trim() || '';
+
+    const durationMin = document.getElementById('ownerServiceDurationMin')?.value?.trim() || '';
+    const durationMax = document.getElementById('ownerServiceDurationMax')?.value?.trim() || '';
+
     const assignedJoki = '';
+
+    const price = (priceMin && priceMax)
+      ? `Rp ${priceMin} - ${priceMax}`
+      : (document.getElementById('ownerServicePrice')?.value?.trim() || '');
+
+    const duration = (durationMin && durationMax)
+      ? `${durationMin}-${durationMax}`.replace(/\s+/g, '')
+      : (document.getElementById('ownerServiceDuration')?.value?.trim() || '');
     const tag = document.getElementById('ownerServiceTag').value.trim();
     const status = document.getElementById('ownerServiceStatus').value;
     const description = document.getElementById('ownerServiceDescription').value.trim();
