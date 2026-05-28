@@ -1248,11 +1248,12 @@ function adminRenderOrderChat(orderId) {
   chatBox.innerHTML = lines || '<p class="body-copy">Belum ada chat untuk order ini.</p>';
   chatBox.scrollTop = chatBox.scrollHeight;
 
-  // If order already paid, disable input (based on request)
+  // Lock chat only when work is marked as selesai/berhasil.
+  // Payment "Dibayar" should NOT lock chat.
   if (input) {
-    const disabled = order.paymentStatus === 'Dibayar' || order.status === 'Berhasil';
+    const disabled = order.status === 'Berhasil';
     input.disabled = disabled;
-    input.placeholder = disabled ? 'Chat terkunci karena order selesai/dibayar.' : 'Tulis pesan untuk customer...';
+    input.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan untuk customer...';
   }
 }
 
