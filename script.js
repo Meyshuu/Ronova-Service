@@ -1,21 +1,26 @@
-const STORAGE_KEY = 'nve-joki-demo-db';
-const AUTH_KEY = 'nve-joki-demo-auth';
+const STORAGE_KEY = 'web-joki-db';
+const AUTH_KEY = 'web-joki-auth';
 const APP_VERSION = 'v1';
 
+const FIREBASE_CONFIG = {
+  apiKey: 'AIzaSyCA0I4Ns_pX0kMOeHVcDoJHtwVLL5H81WM',
+  authDomain: 'web-joki-216fc.firebaseapp.com',
+  projectId: 'web-joki-216fc',
+  storageBucket: 'web-joki-216fc.firebasestorage.app',
+  messagingSenderId: '39123611577',
+  appId: '1:39123611577:web:ac7d974ef3efcddda05068',
+  measurementId: 'G-DCK2W6947S'
+};
+
+// Firestore document path used as the app-wide state store.
+// Gunakan Firebase Console -> Firestore -> Documents untuk melihat dokumen ini.
+const FIREBASE_STATE_PATH = 'appState/web-joki';
+let firebaseEnabled = false;
+// Local QRIS server (Express) URL — change if hosted elsewhere
+const QRIS_SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : `${window.location.origin.replace(window.location.pathname, '')}:3000`;
+
 const defaultData = {
-  users: [
-    {
-      id: 'user-demo',
-      username: 'demo',
-      password: '123456',
-      name: 'Demo Pengguna',
-      role: 'user',
-      balance: 250000,
-      bio: 'Pengguna demo untuk mencoba alur joki, pembayaran, dan status pesanan.',
-      phone: '0812-0000-1111',
-      email: 'demo@example.com'
-    }
-  ],
+  users: [],
   admins: [
     { id: 'admin-main', username: 'admin', password: 'admin123', name: 'Admin Pro', email: 'admin@example.com', phone: '0813-0000-2222' }
   ],
@@ -97,41 +102,8 @@ const defaultData = {
       status: 'Tersedia'
     }
   ],
-  orders: [
-    {
-      id: 'ORD-001',
-      userId: 'user-demo',
-      serviceId: 'carry-rank',
-      userIdTarget: 'AkunDemo123',
-      notes: 'Naik rank 1-2 tier, jangan ganti build.',
-      budget: 120000,
-      status: 'Menunggu Penugasan',
-      paymentStatus: 'Belum Dibayar',
-      createdAt: '2026-05-20',
-      assignedJoki: '',
-      acceptedBy: null,
-      acceptedByName: null,
-      acceptedAt: null
-    },
-    {
-      id: 'ORD-002',
-      userId: 'user-demo',
-      serviceId: 'boss-farm',
-      userIdTarget: 'AkunDemo123',
-      notes: 'Farming material primogem',
-      budget: 75000,
-      status: 'Proses Pengerjaan',
-      paymentStatus: 'Dibayar',
-      createdAt: '2026-05-25',
-      assignedJoki: '',
-      acceptedBy: 'admin',
-      acceptedByName: 'Admin Pro',
-      acceptedAt: '2026-05-25T10:30:00.000Z'
-    }
-  ],
-  chats: [
-    { id: 'chat-001', sender: 'support', message: 'Halo! Ada yang bisa kami bantu? Silakan pilih layanan joki anda.' }
-  ],
+  orders: [],
+  chats: [],
   jokiDirectory: []
 };
 
@@ -146,7 +118,30 @@ const state = {
 
 const channel = 'BroadcastChannel' in window ? new BroadcastChannel('nve-joki-demo') : null;
 
-function loadData() {
+async function initializeFirebase() {
+  if (!FIREBASE_CONFIG.apiKey) {
+    return false;
+  }
+
+  if (!window.firebase?.firestore) {
+    console.warn('Firebase SDK belum dimuat. Pastikan skrip Firebase ada di index.html.');
+    return false;
+  }
+
+  if (!firebase.apps.length) {
+    try {
+      firebase.initializeApp(FIREBASE_CONFIG);
+    } catch (error) {
+      console.warn('Firebase initialization failed:', error);
+      return false;
+    }
+  }
+
+  firebaseEnabled = true;
+  return true;
+}
+
+function loadLocalData() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -158,7 +153,68 @@ function loadData() {
   return defaultData;
 }
 
-const db = loadData();
+async function loadData() {
+  const localData = loadLocalData();
+  if (!FIREBASE_CONFIG.apiKey) {
+    return localData;
+  }
+
+  const initialized = await initializeFirebase();
+  if (!initialized) {
+    return localData;
+  }
+
+  try {
+    const docRef = firebase.firestore().doc(FIREBASE_STATE_PATH);
+    const snapshot = await docRef.get();
+    if (snapshot.exists) {
+      return { ...defaultData, ...snapshot.data() };
+    }
+
+    // Jika dokumen belum ada, buat dokumen awal di Firestore.
+    await docRef.set(localData);
+    return localData;
+  } catch (error) {
+    console.warn('Failed to load Firebase data:', error);
+  }
+
+  return localData;
+}
+
+async function syncFirebaseState() {
+  if (!firebaseEnabled) return;
+
+  try {
+    await firebase.firestore().doc(FIREBASE_STATE_PATH).set(db);
+  } catch (error) {
+    console.warn('Failed to sync state to Firebase:', error);
+  }
+}
+
+function subscribeFirebaseState() {
+  if (!firebaseEnabled) return;
+
+  const docRef = firebase.firestore().doc(FIREBASE_STATE_PATH);
+  docRef.onSnapshot((snapshot) => {
+    if (!snapshot.exists) return;
+    const remoteState = snapshot.data();
+    const localJson = JSON.stringify(db);
+    const remoteJson = JSON.stringify({ ...defaultData, ...remoteState });
+    if (localJson !== remoteJson) {
+      db = { ...defaultData, ...remoteState };
+      persistLocalState();
+      renderAll();
+    }
+  }, (error) => {
+    console.warn('Firebase realtime listener error:', error);
+  });
+}
+
+function persistLocalState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+
+let db = defaultData;
 
 function loadSession() {
   try {
@@ -183,6 +239,9 @@ function persistSession() {
 function persistData() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
   channel?.postMessage({ type: 'sync', payload: db });
+  if (firebaseEnabled) {
+    syncFirebaseState();
+  }
 }
 
 window.addEventListener('storage', (event) => {
@@ -236,6 +295,7 @@ const STATUS_STYLES = {
   'Menunggu Penugasan': 'pending',
   'Diterima': 'progress',
   'Proses Pengerjaan': 'progress',
+  'Menunggu Konfirmasi Owner': 'pending',
   'Berhasil': 'success',
   'Gagal': 'failed'
 };
@@ -338,7 +398,7 @@ function demoteAdmin(adminId) {
 function canAccess(viewName) {
   if (viewName === 'dashboard-view') return state.currentUser?.role === 'user';
   if (viewName === 'admin-view') return state.currentUser?.role === 'admin';
-  if (viewName === 'owner-view' || viewName === 'owner-monitor-view') return state.currentUser?.role === 'owner';
+  if (viewName === 'owner-view' || viewName === 'owner-monitor-view' || viewName === 'owner-trash-view') return state.currentUser?.role === 'owner';
   return true;
 }
 
@@ -379,6 +439,7 @@ function renderTopbar() {
       <button class="nav-btn ${state.view === 'home-view' ? 'active' : ''}" data-view="home-view">Beranda</button>
       <button class="nav-btn ${state.view === 'owner-view' ? 'active' : ''}" data-view="owner-view">Owner</button>
       <button class="nav-btn ${state.view === 'owner-monitor-view' ? 'active' : ''}" data-view="owner-monitor-view">Monitoring Admin</button>
+      <button class="nav-btn ${state.view === 'owner-trash-view' ? 'active' : ''}" data-view="owner-trash-view">Trash Joki</button>
     `;
     topActions.innerHTML = `
       <div class="user-pill" id="userPill">Akun: ${state.currentUser.username} (Owner)</div>
@@ -520,7 +581,7 @@ function renderDashboard() {
     </div>
   `;
   document.getElementById('userBalance').textContent = formatCurrency(balance);
-  document.getElementById('balanceMessage').textContent = 'Pesanan dengan status belum dibayar dapat dibayar langsung dari daftar pesanan.';
+  document.getElementById('balanceMessage').textContent = 'Pembayaran dilakukan lewat QRIS custom. Klik Bayar via QRIS untuk memproses pembayaran.';
 
   const userOrders = db.orders.filter((order) => order.userId === persistedUser.id);
   if (!userOrders.length) {
@@ -529,7 +590,7 @@ function renderDashboard() {
     document.getElementById('userOrdersList').innerHTML = userOrders.map((order) => {
       const service = db.services.find((item) => item.id === order.serviceId);
       const payButton = order.paymentStatus === 'Belum Dibayar'
-        ? `<button class="small-btn pay-order-btn" data-order-id="${order.id}">Bayar sekarang</button>`
+        ? `<button class="small-btn pay-order-btn" data-order-id="${order.id}">Bayar via QRIS</button>`
         : '';
       return `
         <article class="order-item">
@@ -564,18 +625,53 @@ function renderDashboard() {
         alert('Pesanan ini sudah dibayar.');
         return;
       }
-      if (Number(persistedUser.balance || 0) < Number(order.budget || 0)) {
-        alert('Saldo tidak mencukupi untuk pembayaran ini.');
-        return;
-      }
 
-      persistedUser.balance = Number(persistedUser.balance || 0) - Number(order.budget || 0);
+      renderQrisPayment(order);
+    });
+  });
+}
+
+function renderQrisPayment(order) {
+  const amount = Number(order.budget || 0);
+  // Try server-based QR generation first
+  fetch(`${QRIS_SERVER_URL}/create-qris`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ orderId: order.id, amount, description: `Pembayaran order ${order.id}` })
+  }).then((res) => res.json()).then((data) => {
+    if (data && data.payUrl) {
+      // open server QR page which shows QR image
+      const full = `${QRIS_SERVER_URL}${data.payUrl}`.replace(/([^:]\/)\//g, '$1/');
+      window.open(full, '_blank');
+      alert('Halaman QRIS dibuka. Silakan lakukan pembayaran lalu tunggu sistem mendeteksi konfirmasi otomatis.');
+    } else if (data && data.qrcode) {
+      // fallback: show data URL
+      const w = window.open('about:blank');
+      if (w) {
+        w.document.write(`<img src="${data.qrcode}" alt="QRIS"/><p>Scan untuk bayar ${formatCurrency(amount)}</p>`);
+      }
+      alert('QRIS ditampilkan dalam jendela baru. Silakan bayar dan tunggu konfirmasi otomatis.');
+    } else {
+      throw new Error('Invalid QR response');
+    }
+  }).catch((err) => {
+    console.warn('QRIS server unreachable, falling back to manual confirm', err);
+    const qrisContent = `QRIS Payment\nNominal: Rp ${formatCurrency(amount)}\nTujuan: E-wallet / bank Anda\n\nGunakan aplikasi e-wallet atau mobile banking untuk memindai QRIS ini dan bayar sebesar nominal di atas.`;
+    const qrisLink = `https://example.com/qris-pay?amount=${amount}`;
+    const proceed = confirm(`${qrisContent}\n\nKlik OK untuk membuka tautan pembayaran QRIS (fallback) dan konfirmasi setelah transfer selesai.`);
+    if (!proceed) return;
+    window.open(qrisLink, '_blank');
+    const confirmed = confirm('Apakah pembayaran QRIS sudah selesai? Jika sudah, klik OK untuk menyelesaikan proses.');
+    if (confirmed) {
       order.paymentStatus = 'Dibayar';
-      state.pendingOrderId = null;
+      order.paymentMethod = 'QRIS';
+      order.paidAt = new Date().toISOString();
       persistData();
       renderAll();
-      document.getElementById('balanceMessage').textContent = `Pembayaran ${order.id} berhasil: ${formatCurrency(order.budget)} dipotong dari saldo.`;
-    });
+      alert(`Pembayaran order ${order.id} terkonfirmasi. Status: Dibayar.`);
+    } else {
+      alert('Pembayaran belum dikonfirmasi. Order masih menunggu pembayaran.');
+    }
   });
 }
 
@@ -813,17 +909,66 @@ function renderOwnerMonitoring() {
     `;
   }).join('') || '<p class="body-copy">Belum ada admin untuk dipantau.</p>';
 
-  // Render deleted/trash orders for owner with undo/perm-delete actions
-  const deleted = (db.deletedOrders || []);
-  const deletedHtml = deleted.length
-    ? deleted.map((o) => {
+  const pendingRequests = db.orders.filter((o) => o.status === 'Menunggu Konfirmasi Owner');
+  const pendingHtml = pendingRequests.length
+    ? pendingRequests.map((o) => {
         const service = db.services.find((s) => s.id === o.serviceId) || {};
         return `
           <article class="order-item small">
             <div class="order-head">
               <strong>#${o.id} • ${service.title || 'Layanan'}</strong>
               <div class="order-badges">
-                <span class="status-badge pending">Dihapus</span>
+                <span class="status-badge pending">${o.status}</span>
+              </div>
+            </div>
+            <div class="order-body">
+              <span class="item-subtle">Pengguna: ${o.userIdTarget}</span>
+              <span class="item-subtle">Permintaan selesai oleh: ${o.completionRequest?.requestedByName || o.completionRequest?.requestedBy || 'Admin'}</span>
+              <span class="item-subtle">Tanggal selesai: ${o.completionRequest?.completionDate || '-'}</span>
+              <span class="item-subtle">Bukti: ${o.completionRequest?.proof || 'Tidak ada bukti'}</span>
+            </div>
+            <div class="order-actions">
+              <button class="small-btn" onclick="ownerConfirmOrderCompletion('${o.id}')">Konfirmasi selesai</button>
+              <button class="small-btn danger" onclick="ownerRejectOrderCompletion('${o.id}')">Tolak</button>
+            </div>
+          </article>
+        `;
+      }).join('')
+    : '<p class="body-copy">Tidak ada permintaan selesai menunggu konfirmasi.</p>';
+
+  document.getElementById('ownerMonitorList').innerHTML += `
+    <div style="margin-top:24px;">
+      <h4>Permintaan penyelesaian</h4>
+      ${pendingHtml}
+    </div>
+  `;
+}
+
+function renderOwnerTrashPage() {
+  const owner = getCurrentUser();
+  if (!owner || owner.role !== 'owner') {
+    document.getElementById('ownerTrashList').innerHTML = '<p class="body-copy">Akses trash hanya untuk owner.</p>';
+    return;
+  }
+
+  const trashOrders = (db.deletedOrders || []).slice().sort((a, b) => {
+    const orderPriority = ['Menunggu Penugasan', 'Diterima', 'Proses Pengerjaan', 'Menunggu Konfirmasi Owner', 'Berhasil', 'Gagal'];
+    const indexA = orderPriority.indexOf(a.status);
+    const indexB = orderPriority.indexOf(b.status);
+    if (indexA !== indexB) return indexA - indexB;
+    return new Date(b.deletedAt) - new Date(a.deletedAt);
+  });
+
+  document.getElementById('ownerTrashList').innerHTML = trashOrders.length
+    ? trashOrders.map((o) => {
+        const service = db.services.find((s) => s.id === o.serviceId) || {};
+        return `
+          <article class="order-item">
+            <div class="order-head">
+              <strong>#${o.id} • ${service.title || 'Layanan'}</strong>
+              <div class="order-badges">
+                <span class="status-badge ${getStatusClass(o.status)}">${o.status}</span>
+                <span class="status-badge pending">Trash</span>
               </div>
             </div>
             <div class="order-body">
@@ -839,13 +984,27 @@ function renderOwnerMonitoring() {
         `;
       }).join('')
     : '<p class="body-copy">Tidak ada order di trash.</p>';
+}
 
-  document.getElementById('ownerMonitorList').innerHTML += `
-    <div style="margin-top:16px;">
-      <h4>Trash (order yang dihapus)</h4>
-      ${deletedHtml}
-    </div>
-  `;
+function ownerConfirmOrderCompletion(orderId) {
+  const order = db.orders.find((o) => o.id === orderId);
+  if (!order) return alert('Order tidak ditemukan.');
+  if (order.status !== 'Menunggu Konfirmasi Owner') return alert('Order tidak dalam status permintaan konfirmasi.');
+  order.status = 'Berhasil';
+  order.completedAt = new Date().toISOString();
+  persistData();
+  renderAll();
+  alert(`Order ${orderId} telah dikonfirmasi selesai oleh owner.`);
+}
+
+function ownerRejectOrderCompletion(orderId) {
+  const order = db.orders.find((o) => o.id === orderId);
+  if (!order) return alert('Order tidak ditemukan.');
+  if (order.status !== 'Menunggu Konfirmasi Owner') return alert('Order tidak dalam status permintaan konfirmasi.');
+  order.status = 'Gagal';
+  persistData();
+  renderAll();
+  alert(`Order ${orderId} ditolak dan ditandai gagal oleh owner.`);
 }
 
 function ownerDeleteOrder(orderId) {
@@ -929,6 +1088,28 @@ function renderAdminOrdersPage() {
     ? acceptedOrdersByAdmin.map((order) => {
         const service = db.services.find((item) => item.id === order.serviceId);
         const acceptedAtText = order.acceptedAt ? new Date(order.acceptedAt).toLocaleString('id-ID') : 'Waktu belum tercatat';
+        const completionRequestBlock = order.completionRequest
+          ? `
+              <div class="order-body">
+                <span class="item-subtle">Permintaan selesai oleh: ${order.completionRequest.requestedByName || order.completionRequest.requestedBy}</span>
+                <span class="item-subtle">Tanggal selesai: ${order.completionRequest.completionDate}</span>
+                <span class="item-subtle">Bukti: ${order.completionRequest.proof || 'Tidak ada bukti'}</span>
+                <span class="item-subtle">Status permintaan: Menunggu konfirmasi owner</span>
+              </div>
+            `
+          : `
+              <div class="status-control" style="margin-top:12px;">
+                <label>
+                  <span>Tanggal selesai</span>
+                  <input type="date" id="completionDate-${order.id}" value="${new Date().toISOString().slice(0, 10)}" />
+                </label>
+                <label>
+                  <span>Bukti / catatan</span>
+                  <textarea id="completionProof-${order.id}" rows="2" placeholder="Contoh: screenshot, log, pesan selesai"></textarea>
+                </label>
+                <button class="small-btn" onclick="adminSubmitCompletionRequest('${order.id}')">Ajukan selesai ke owner</button>
+              </div>
+            `;
         return `
           <article class="order-item">
             <div class="order-head">
@@ -944,6 +1125,7 @@ function renderAdminOrdersPage() {
               <span class="item-subtle">Waktu penugasan: ${acceptedAtText}</span>
               <span class="item-subtle">Budget: ${formatCurrency(order.budget)} • ${order.createdAt}</span>
             </div>
+            ${completionRequestBlock}
           </article>
         `;
       }).join('')
@@ -970,6 +1152,38 @@ function renderAdminOrdersPage() {
   });
 }
 
+function adminSubmitCompletionRequest(orderId) {
+  const admin = getCurrentUser();
+  if (!admin || admin.role !== 'admin') {
+    return alert('Akses hanya untuk admin.');
+  }
+  const order = db.orders.find((entry) => entry.id === orderId);
+  if (!order) {
+    return alert('Order tidak ditemukan.');
+  }
+  const completionDateInput = document.getElementById(`completionDate-${orderId}`);
+  const proofInput = document.getElementById(`completionProof-${orderId}`);
+  const completionDate = completionDateInput?.value;
+  const proof = proofInput?.value.trim();
+  if (!completionDate) {
+    return alert('Tanggal penyelesaian harus diisi.');
+  }
+  if (!proof) {
+    return alert('Bukti atau catatan penyelesaian harus diisi.');
+  }
+  order.completionRequest = {
+    requestedBy: admin.username,
+    requestedByName: admin.name,
+    requestedAt: new Date().toISOString(),
+    completionDate,
+    proof
+  };
+  order.status = 'Menunggu Konfirmasi Owner';
+  persistData();
+  renderAll();
+  alert('Permintaan selesai telah dikirim ke owner.');
+}
+
 function renderAll() {
   renderTopbar();
   renderServiceGrid();
@@ -978,6 +1192,7 @@ function renderAll() {
   renderAdminOrdersPage();
   renderOwner();
   renderOwnerMonitoring();
+  renderOwnerTrashPage();
 }
 
 function handleLogin(username, password) {
@@ -1008,7 +1223,7 @@ function handleLogin(username, password) {
     return true;
   }
 
-  alert('Login gagal. Cek kredensial demo.');
+  alert('Login gagal. Periksa username dan password Anda.');
   return false;
 }
 
@@ -1023,8 +1238,8 @@ function registerUser(username, password, name, email, phone) {
     password,
     name,
     role: 'user',
-    balance: 100000,
-    bio: 'Akun baru dibuat dari demo web.',
+    balance: 0,
+    bio: '',
     email,
     phone
   });
@@ -1179,7 +1394,17 @@ function attachEvents() {
   });
 }
 
-attachEvents();
-renderAll();
-const defaultView = state.currentUser?.role === 'owner' ? 'owner-view' : state.currentUser?.role === 'admin' ? 'admin-view' : state.currentUser?.role === 'user' ? 'dashboard-view' : 'home-view';
-navigateTo(defaultView);
+async function startApp() {
+  await initializeFirebase();
+  db = await loadData();
+  if (firebaseEnabled) {
+    subscribeFirebaseState();
+  }
+  state.currentUser = loadSession();
+  attachEvents();
+  renderAll();
+  const defaultView = state.currentUser?.role === 'owner' ? 'owner-view' : state.currentUser?.role === 'admin' ? 'admin-view' : state.currentUser?.role === 'user' ? 'dashboard-view' : 'home-view';
+  navigateTo(defaultView);
+}
+
+startApp();

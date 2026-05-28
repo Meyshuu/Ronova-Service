@@ -1,0 +1,18 @@
+# Node modules
+node_modules/
+/functions/node_modules/
+/server/node_modules/
+
+# Environment and credentials
+.env
+.env.*
+server/serviceAccount.json
+functions/*.local.json
+
+# Firebase local emulator data
+.firebase/
+firestore-debug.log
+
+# OS files
+.DS_Store
+Thumbs.db

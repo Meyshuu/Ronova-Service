@@ -24,9 +24,9 @@
       <section id="home-view" class="page active">
         <div class="hero-card">
           <div>
-            <p class="hero-label">Marketplace joki gamified / realtime demo</p>
-            <h2>Pesan joki, pantau status, dan kelola saldo langsung dari satu dashboard.</h2>
-            <p class="hero-copy">Website dasar ini menggunakan penyimpanan lokal sebagai database demo agar bisa berjalan di laptop tanpa biaya tambahan. Anda bisa menggantinya dengan Firebase, Supabase, atau backend pribadi nanti.</p>
+            <p class="hero-label">Marketplace joki gamified / realtime</p>
+            <h2>Pesan joki, pantau status, dan kelola pemesanan dari satu dashboard.</h2>
+            <p class="hero-copy">Aplikasi ini terhubung ke Firestore dan mendukung alur owner/admin dengan pembayaran QRIS custom.</p>
           </div>
           <div class="hero-stats">
             <div class="stat-chip">✅ Realtime tab (local sync)</div>
@@ -125,7 +125,7 @@
             </form>
 
             <div class="payment-area">
-              <p class="payment-label">Status pembayaran demo</p>
+              <p class="payment-label">Status pembayaran</p>
               <p id="paymentStatus" class="payment-status">Belum bayar</p>
             </div>
 
@@ -151,21 +151,20 @@
           <article class="auth-card">
             <p class="eyebrow">Akun pengguna</p>
             <h2>Login pengguna</h2>
-            <p class="body-copy">Gunakan akun demo untuk melihat dashboard, saldo, dan riwayat jokian.</p>
+            <p class="body-copy">Silakan gunakan akun Anda sendiri atau daftar untuk mulai membuat pesanan.</p>
             <form id="loginForm">
               <label>
                 <span>Username</span>
-                <input type="text" id="loginUsername" placeholder="demo" required />
+                <input type="text" id="loginUsername" placeholder="Username" required />
               </label>
               <label>
                 <span>Password</span>
-                <input type="password" id="loginPassword" placeholder="123456" required />
+                <input type="password" id="loginPassword" placeholder="Password" required />
               </label>
               <button type="submit" class="primary-btn">Masuk</button>
             </form>
             <div class="credential-note">
-              <p><strong>Demo akun:</strong></p>
-              <p>Pengguna: demo / 123456</p>
+              <p><strong>Akses admin / owner:</strong></p>
               <p>Admin: admin / admin123</p>
               <p>Owner: owner / owner123</p>
             </div>
@@ -174,7 +173,7 @@
           <article class="auth-card">
             <p class="eyebrow">Registrasi cepat</p>
             <h2>Buat akun baru</h2>
-            <p class="body-copy">Akun baru akan disimpan di perangkat lokal saat demo berjalan.</p>
+            <p class="body-copy">Akun baru akan disimpan dengan aman dan dapat digunakan untuk memesan layanan.</p>
             <form id="registerForm">
               <label>
                 <span>Nama pengguna</span>
@@ -281,11 +280,10 @@
                   <option value="Menunggu Penugasan">Menunggu Penugasan</option>
                   <option value="Diterima">Diterima</option>
                   <option value="Proses Pengerjaan">Proses Pengerjaan</option>
-                  <option value="Berhasil">Berhasil</option>
-                  <option value="Gagal">Gagal</option>
                 </select>
               </label>
               <button id="applyStatusBtn" class="primary-btn">Simpan perubahan</button>
+              <p class="body-copy" style="margin-top:8px; font-size:0.95rem; color:var(--text-muted);">Penyelesaian order harus dikonfirmasi owner melalui permintaan selesai.</p>
             </div>
           </article>
         </div>
@@ -436,10 +434,26 @@
           </article>
         </div>
       </section>
+
+      <section id="owner-trash-view" class="page">
+        <div class="owner-monitor-grid">
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Trash Joki</p>
+                <p class="section-subtitle">Daftar order yang dihapus oleh owner, disusun menurut status dan tanggal.</p>
+              </div>
+            </div>
+            <div id="ownerTrashList" class="order-list"></div>
+          </article>
+        </div>
+      </section>
     </main>
   </div>
 
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <!-- Tambah query parameter untuk bust cache browser saat mengembangkan -->
-  <script src="script.js?v=1"></script>
+  <script src="script.js?v=2"></script>
 </body>
 </html>
