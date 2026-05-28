@@ -21,13 +21,10 @@ const QRIS_SERVER_URL = window.location.hostname === 'localhost' ? 'http://local
 
 const defaultData = {
   users: [],
-  admins: [
-    { id: 'admin-main', username: 'admin', password: 'admin123', name: 'Admin Pro', email: 'admin@example.com', phone: '0813-0000-2222' }
-  ],
-  owners: [
-    { id: 'owner-main', username: 'owner', password: 'owner123', name: 'Owner Master', email: 'owner@example.com', phone: '0814-0000-3333' }
-  ],
+  admins: [],
+  owners: [],
   deletedOrders: [],
+
   services: [
     {
       id: 'carry-rank',
