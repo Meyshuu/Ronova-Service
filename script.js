@@ -290,7 +290,7 @@ function getAdminMetrics(adminUsername) {
   return {
     acceptedOrders,
     totalValue,
-    commission: totalValue * 0.9
+    commission: totalValue * 0.95
   };
 }
 
@@ -1585,8 +1585,26 @@ function attachEvents() {
     });
   }
 
+  const adminMarkPaidBtn = document.getElementById('adminMarkPaidBtn');
+  if (adminMarkPaidBtn) {
+    adminMarkPaidBtn.addEventListener('click', () => {
+      const orderId = document.getElementById('orderSelect')?.value;
+      if (!orderId) return alert('Pilih pesanan terlebih dahulu.');
+      const order = db.orders.find((o) => o.id === orderId);
+      if (!order) return alert('Order tidak ditemukan.');
+      order.paymentStatus = 'Dibayar';
+      order.paymentMethod = 'Admin';
+      order.paidAt = new Date().toISOString();
+      persistData();
+      renderAll();
+      alert(`Order ${orderId} ditandai dibayar.`);
+    });
+  }
+
+
   const sendBtn = document.getElementById('sendAdminOrderChatBtn');
   const inputEl = document.getElementById('adminOrderChatMessageInput');
+
   if (sendBtn && inputEl) {
     sendBtn.addEventListener('click', () => {
       const admin = getCurrentUser();

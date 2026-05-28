@@ -283,8 +283,11 @@
                 </select>
               </label>
               <button id="applyStatusBtn" class="primary-btn">Simpan perubahan</button>
+              <button id="adminMarkPaidBtn" class="secondary-btn" type="button" style="margin-left:10px;">Tandai jokian dibayar</button>
+
               <p class="body-copy" style="margin-top:8px; font-size:0.95rem; color:var(--text-muted);">Penyelesaian order harus dikonfirmasi owner melalui permintaan selesai.</p>
             </div>
+
 
             <div class="price-payment-panel" style="margin-top:18px;">
               <div class="section-heading" style="margin-bottom:10px;">
@@ -298,7 +301,7 @@
                   <span>Harga final (IDR)</span>
                   <input type="number" id="adminOrderFinalPrice" placeholder="mis. 50000" min="0" step="1000" />
                 </label>
-                <button class="primary-btn" id="adminConfirmPricePaymentBtn" type="button">Konfirmasi harga & bayar via QRIS</button>
+                <button class="primary-btn" id="adminConfirmPricePaymentBtn" type="button">Konfirmasi harga</button>
               </div>
               <p id="adminPricePaymentMsg" class="body-copy" style="margin-top:8px; color:var(--text-muted);"></p>
             </div>
