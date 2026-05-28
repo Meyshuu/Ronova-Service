@@ -2,6 +2,7 @@ const STORAGE_KEY = 'web-joki-db';
 const AUTH_KEY = 'web-joki-auth';
 const APP_VERSION = 'v1';
 
+
 const FIREBASE_CONFIG = {
   apiKey: 'AIzaSyCA0I4Ns_pX0kMOeHVcDoJHtwVLL5H81WM',
   authDomain: 'web-joki-216fc.firebaseapp.com',
@@ -1193,6 +1194,9 @@ function renderAll() {
 }
 
 function handleLogin(username, password) {
+  // Demo-safe: tetap gunakan username/password dari Firestore dokumen state.
+  // Jika kamu mau semua role masuk ke Firebase Auth, ini perlu migrasi ke Firebase Auth + Custom Claims.
+
   const owner = db.owners.find((entry) => entry.username === username && entry.password === password);
   if (owner) {
     state.currentUser = { username: owner.username, role: 'owner', name: owner.name };
@@ -1223,6 +1227,7 @@ function handleLogin(username, password) {
   alert('Login gagal. Periksa username dan password Anda.');
   return false;
 }
+
 
 function registerUser(username, password, name, email, phone) {
   if (db.users.some((user) => user.username === username)) {
