@@ -1751,6 +1751,16 @@ function attachEvents() {
       // (customer reply dapat ditambahkan kemudian bila diperlukan)
     });
   }
+
+  // lock chat customer when order is Berhasil
+  if (sendCustBtn && custMsgInput) {
+    const fileEl = document.getElementById('customerOrderChatFileInput');
+    const selectedOrder = db.orders.find((o) => o.id === state.pendingOrderId);
+    const disabled = isOrderChatLocked(selectedOrder);
+    custMsgInput.disabled = disabled;
+    if (fileEl) fileEl.disabled = disabled;
+    custMsgInput.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan...';
+  }
 }
 
 async function startApp() {
