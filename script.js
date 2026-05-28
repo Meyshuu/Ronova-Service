@@ -966,46 +966,45 @@ function renderOwnerMonitoring() {
   `;
 }
 
-function renderOwnerTrashPage() {
+function renderOwnerServicesTrashPage() {
   const owner = getCurrentUser();
   if (!owner || owner.role !== 'owner') {
-    document.getElementById('ownerTrashList').innerHTML = '<p class="body-copy">Akses trash hanya untuk owner.</p>';
+    const el = document.getElementById('ownerServicesList');
+    if (el) el.innerHTML = '<p class="body-copy">Akses hapus layanan hanya untuk owner.</p>';
     return;
   }
 
-  const trashOrders = (db.deletedOrders || []).slice().sort((a, b) => {
-    const orderPriority = ['Menunggu Penugasan', 'Diterima', 'Proses Pengerjaan', 'Menunggu Konfirmasi Owner', 'Berhasil', 'Gagal'];
-    const indexA = orderPriority.indexOf(a.status);
-    const indexB = orderPriority.indexOf(b.status);
-    if (indexA !== indexB) return indexA - indexB;
-    return new Date(b.deletedAt) - new Date(a.deletedAt);
-  });
+  const searchInput = document.getElementById('serviceSearchInput');
+  const query = (searchInput?.value || '').toLowerCase().trim();
 
-  document.getElementById('ownerTrashList').innerHTML = trashOrders.length
-    ? trashOrders.map((o) => {
-        const service = db.services.find((s) => s.id === o.serviceId) || {};
-        return `
-          <article class="order-item">
-            <div class="order-head">
-              <strong>#${o.id} • ${service.title || 'Layanan'}</strong>
-              <div class="order-badges">
-                <span class="status-badge ${getStatusClass(o.status)}">${o.status}</span>
-                <span class="status-badge pending">Trash</span>
-              </div>
+  const services = Array.isArray(db.services) ? db.services : [];
+  const filtered = services.filter((s) => [s.title, s.category, s.tag, s.description].some((f) => String(f || '').toLowerCase().includes(query)));
+
+  const listEl = document.getElementById('ownerServicesList');
+  if (!listEl) return;
+
+  listEl.innerHTML = filtered.length
+    ? filtered.map((service) => `
+        <article class="order-item">
+          <div class="order-head">
+            <strong>${service.title}</strong>
+            <div class="order-badges">
+              <span class="status-badge success">${service.category}</span>
+              <span class="status-badge ${service.status === 'Tersedia' ? 'success' : 'failed'}">${service.status}</span>
             </div>
-            <div class="order-body">
-              <span class="item-subtle">Pengguna: ${o.userIdTarget}</span>
-              <span class="item-subtle">Budget: ${formatCurrency(o.budget)} • ${o.createdAt}</span>
-              <span class="item-subtle">Dihapus pada: ${o.deletedAt}</span>
-            </div>
-            <div class="order-actions">
-              <button class="small-btn" onclick="ownerRestoreOrder('${o.id}')">Undo</button>
-              <button class="small-btn danger" onclick="ownerPermanentlyDeleteOrder('${o.id}')">Hapus permanen</button>
-            </div>
-          </article>
-        `;
-      }).join('')
-    : '<p class="body-copy">Tidak ada order di trash.</p>';
+          </div>
+          <div class="order-body">
+            <span class="item-subtle">Harga: ${service.price || '-'}</span>
+            <span class="item-subtle">Durasi: ${service.duration || '-'}</span>
+            <span class="item-subtle">Tag: ${service.tag || '-'}</span>
+            <span class="item-subtle">ID: ${service.id}</span>
+          </div>
+          <div class="order-actions">
+            <button class="small-btn danger" onclick="ownerDeleteService('${service.id}')">Hapus layanan</button>
+          </div>
+        </article>
+      `).join('')
+    : '<p class="body-copy">Tidak ada layanan.</p>';
 }
 
 function ownerConfirmOrderCompletion(orderId) {
@@ -1064,6 +1063,19 @@ function ownerPermanentlyDeleteOrder(orderId) {
   persistData();
   renderAll();
   alert(`Order ${orderId} berhasil dihapus permanen.`);
+}
+
+function ownerDeleteService(serviceId) {
+  const service = db.services.find((s) => s.id === serviceId);
+  if (!service) return alert('Layanan tidak ditemukan.');
+
+  const confirmText = `Hapus layanan:\n${service.title}\nID: ${service.id}\n\nAksi ini akan:\n- Menghapus service dari daftar layanan\n- Order yang sudah ada tetap tersimpan (hanya tampilan layanan bisa kosong)\n\nLanjutkan?`;
+  if (!confirm(confirmText)) return;
+
+  db.services = (db.services || []).filter((s) => s.id !== serviceId);
+  persistData();
+  renderAll();
+  alert(`Layanan ${service.title} berhasil dihapus.`);
 }
 
 function renderAdminOrdersPage() {
@@ -1214,7 +1226,7 @@ function renderAll() {
   renderAdminOrdersPage();
   renderOwner();
   renderOwnerMonitoring();
-  renderOwnerTrashPage();
+  renderOwnerServicesTrashPage();
 }
 
 function handleLogin(username, password) {
@@ -1287,6 +1299,14 @@ function attachEvents() {
     renderServiceGrid();
   });
   document.getElementById('backToListBtn').addEventListener('click', () => navigateTo('home-view'));
+
+  const serviceSearchInput = document.getElementById('serviceSearchInput');
+  if (serviceSearchInput) {
+    serviceSearchInput.addEventListener('input', () => {
+      renderOwnerServicesTrashPage();
+    });
+  }
+
 
   document.getElementById('orderForm').addEventListener('submit', (event) => {
     event.preventDefault();
