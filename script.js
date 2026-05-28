@@ -1752,10 +1752,20 @@ async function startApp() {
     subscribeFirebaseState();
   }
   state.currentUser = loadSession();
+
   attachEvents();
+
+  // guard: jika belum login, paksa ke auth view
+  if (!state.currentUser) {
+    renderAll();
+    navigateTo('auth-view');
+    return;
+  }
+
   renderAll();
   const defaultView = state.currentUser?.role === 'owner' ? 'owner-view' : state.currentUser?.role === 'admin' ? 'admin-view' : state.currentUser?.role === 'user' ? 'dashboard-view' : 'home-view';
   navigateTo(defaultView);
 }
 
 startApp();
+
