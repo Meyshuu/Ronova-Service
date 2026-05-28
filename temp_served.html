@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Joki Neverness to Everness</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <p class="eyebrow">Portal Joki</p>
+          <h1>Neverness to Everness</h1>
+        </div>
+      </div>
+      <div class="top-nav-area" id="topNavArea"></div>
+      <div class="top-actions" id="topActions"></div>
+    </header>
+
+    <main class="content">
+      <section id="home-view" class="page active">
+        <div class="hero-card">
+          <div>
+            <p class="hero-label">Marketplace joki gamified / realtime demo</p>
+            <h2>Pesan joki, pantau status, dan kelola saldo langsung dari satu dashboard.</h2>
+            <p class="hero-copy">Website dasar ini menggunakan penyimpanan lokal sebagai database demo agar bisa berjalan di laptop tanpa biaya tambahan. Anda bisa menggantinya dengan Firebase, Supabase, atau backend pribadi nanti.</p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-chip">✅ Realtime tab (local sync)</div>
+            <div class="stat-chip">💳 Simulasi pembayaran</div>
+            <div class="stat-chip">📱 Responsif desktop/mobile</div>
+          </div>
+        </div>
+
+        <div class="section-toolbar">
+          <div>
+            <p class="section-title">Pilih layanan joki</p>
+            <p class="section-subtitle">Klik kartu untuk membuka halaman detail pesanan.</p>
+          </div>
+          <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Cari layanan / tipe joki" />
+          </div>
+        </div>
+
+        <div class="pagination-tools">
+          <div class="page-controls" id="pageControls">
+            <button id="prevPageBtn" class="small-btn">‹ Sebelumnya</button>
+            <span id="pageInfo">Halaman 1 / 1</span>
+            <button id="nextPageBtn" class="small-btn">Berikutnya ›</button>
+          </div>
+          <div class="legend">Tampil per halaman: <strong id="perPageDisplay">6</strong> layanan</div>
+        </div>
+
+        <div id="serviceGrid" class="service-grid"></div>
+      </section>
+
+      <section id="detail-view" class="page">
+        <div class="detail-actions">
+          <button id="backToListBtn" class="small-btn">← Kembali ke menu</button>
+        </div>
+
+        <div class="detail-grid">
+          <article class="detail-card large-card">
+            <div class="detail-topline">
+              <span class="pill pill-primary" id="detailCategory">Kategori</span>
+              <span class="pill pill-neutral" id="detailTag">Status</span>
+            </div>
+            <h2 id="detailTitle">Nama layanan</h2>
+            <p id="detailDescription" class="body-copy"></p>
+
+            <div class="detail-meta">
+              <div class="meta-box">
+                <p class="meta-label">Harga</p>
+                <p class="meta-value" id="detailPrice">0</p>
+              </div>
+              <div class="meta-box">
+                <p class="meta-label">Waktu</p>
+                <p class="meta-value" id="detailDuration">0</p>
+              </div>
+              <div class="meta-box">
+                <p class="meta-label">Joki</p>
+                <p class="meta-value" id="detailJoki">-</p>
+              </div>
+            </div>
+
+            <div class="requirements-box">
+              <h3>Persyaratan</h3>
+              <ul id="detailRequirements"></ul>
+            </div>
+          </article>
+
+          <article class="detail-card form-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Form pesanan joki</p>
+                <p class="section-subtitle">Isi info akun target untuk diproses.</p>
+              </div>
+            </div>
+
+            <form id="orderForm">
+              <label>
+                <span>User ID</span>
+                <input type="text" id="orderUserId" placeholder="Masukkan user ID target" required />
+              </label>
+              <label>
+                <span>Password akun (opsional / disarankan)</span>
+                <input type="password" id="orderPassword" placeholder="Masukkan password sementara" />
+              </label>
+              <label>
+                <span>Catatan pengerjaan</span>
+                <textarea id="orderNotes" rows="4" placeholder="Contoh: target arcanum, role priority, region akun"></textarea>
+              </label>
+              <label>
+                <span>Nominal otomatis (berdasarkan layanan)</span>
+                <input type="number" id="orderBudget" placeholder="0" min="0" step="1000" disabled />
+              </label>
+              <p class="body-copy">Harga terendah bersifat estimasi dan bisa berubah tergantung kondisi akun target yang akan dijoki.</p>
+
+              <div class="button-row">
+                <button type="submit" class="primary-btn">Buat pesanan</button>
+              </div>
+            </form>
+
+            <div class="payment-area">
+              <p class="payment-label">Status pembayaran demo</p>
+              <p id="paymentStatus" class="payment-status">Belum bayar</p>
+            </div>
+
+            <div class="chat-panel">
+              <div class="chat-head">
+                <div>
+                  <p class="section-title">Customer chat</p>
+                  <p class="section-subtitle">Diskusi dengan support cepat.</p>
+                </div>
+              </div>
+              <div id="customerChatBox" class="chat-box"></div>
+              <div class="chat-input-row">
+                <input type="text" id="chatMessageInput" placeholder="Ketik pertanyaan Anda" />
+                <button id="sendChatBtn" class="small-btn">Kirim</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="auth-view" class="page">
+        <div class="auth-grid">
+          <article class="auth-card">
+            <p class="eyebrow">Akun pengguna</p>
+            <h2>Login pengguna</h2>
+            <p class="body-copy">Gunakan akun demo untuk melihat dashboard, saldo, dan riwayat jokian.</p>
+            <form id="loginForm">
+              <label>
+                <span>Username</span>
+                <input type="text" id="loginUsername" placeholder="demo" required />
+              </label>
+              <label>
+                <span>Password</span>
+                <input type="password" id="loginPassword" placeholder="123456" required />
+              </label>
+              <button type="submit" class="primary-btn">Masuk</button>
+            </form>
+            <div class="credential-note">
+              <p><strong>Demo akun:</strong></p>
+              <p>Pengguna: demo / 123456</p>
+              <p>Admin: admin / admin123</p>
+              <p>Owner: owner / owner123</p>
+            </div>
+          </article>
+
+          <article class="auth-card">
+            <p class="eyebrow">Registrasi cepat</p>
+            <h2>Buat akun baru</h2>
+            <p class="body-copy">Akun baru akan disimpan di perangkat lokal saat demo berjalan.</p>
+            <form id="registerForm">
+              <label>
+                <span>Nama pengguna</span>
+                <input type="text" id="registerUsername" placeholder="namapengguna" required />
+              </label>
+              <label>
+                <span>Password</span>
+                <input type="password" id="registerPassword" placeholder="minimal 4 karakter" required />
+              </label>
+              <label>
+                <span>Nama lengkap</span>
+                <input type="text" id="registerName" placeholder="Nama Lengkap" required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input type="email" id="registerEmail" placeholder="email@contoh.com" required />
+              </label>
+              <label>
+                <span>No telepon</span>
+                <input type="tel" id="registerPhone" placeholder="0812xxxxxxx" required />
+              </label>
+              <button type="submit" class="primary-btn">Daftar akun</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section id="dashboard-view" class="page">
+        <div class="dashboard-grid">
+          <article class="dashboard-card profile-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Profil pengguna</p>
+                <p class="section-subtitle">Data akun dan saldo.</p>
+              </div>
+            </div>
+            <div id="profileSummary"></div>
+          </article>
+
+          <article class="dashboard-card balance-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Saldo & pembayaran</p>
+                <p class="section-subtitle">Saldo sudah terikat dengan pembayaran pesanan.</p>
+              </div>
+            </div>
+            <div class="balance-box">
+              <p class="meta-label">Saldo aktif</p>
+              <p id="userBalance" class="balance-value">0</p>
+            </div>
+            <p id="balanceMessage" class="body-copy">Pesanan dengan status belum dibayar dapat dibayar langsung dari daftar pesanan.</p>
+          </article>
+
+          <article class="dashboard-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Status jokian & riwayat</p>
+                <p class="section-subtitle">Pusat kontrol pesanan pengguna.</p>
+              </div>
+            </div>
+            <div id="userOrdersList" class="order-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="admin-view" class="page">
+        <div class="admin-grid">
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Admin panel</p>
+                <p class="section-subtitle">Profil joki internal sebagai referensi tim admin — informasi Alyra, Kira, Milo, dan lainnya digunakan untuk melihat daftar joki, bukan menu pemesanan langsung.</p>
+              </div>
+            </div>
+            <div id="adminDashboardMetrics" class="detail-meta"></div>
+            <div id="jokiDirectory" class="joki-directory"></div>
+          </article>
+
+          <article class="admin-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Daftar pesanan</p>
+                <p class="section-subtitle">Update status joki per order.</p>
+              </div>
+            </div>
+            <div id="adminOrdersList" class="order-list"></div>
+          </article>
+
+          <article class="admin-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Perbarui status</p>
+                <p class="section-subtitle">Kelola lifecycle pesanan.</p>
+              </div>
+            </div>
+            <div class="status-control">
+              <label>
+                <span>Pilih pesanan</span>
+                <select id="orderSelect"></select>
+              </label>
+              <label>
+                <span>Status baru</span>
+                <select id="statusSelect">
+                  <option value="Menunggu Penugasan">Menunggu Penugasan</option>
+                  <option value="Diterima">Diterima</option>
+                  <option value="Proses Pengerjaan">Proses Pengerjaan</option>
+                  <option value="Berhasil">Berhasil</option>
+                  <option value="Gagal">Gagal</option>
+                </select>
+              </label>
+              <button id="applyStatusBtn" class="primary-btn">Simpan perubahan</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="admin-orders-view" class="page">
+        <div class="admin-orders-grid">
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Antrean orderan</p>
+                <p class="section-subtitle">Ambil orderan yang belum ditugaskan ke admin.</p>
+              </div>
+            </div>
+            <div id="adminQueueList" class="order-list"></div>
+          </article>
+
+          <article class="admin-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Orderan yang saya ambil</p>
+                <p class="section-subtitle">Status pengerjaan dari admin tempat anda bertugas.</p>
+              </div>
+            </div>
+            <div id="adminAcceptedOrdersList" class="order-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="owner-view" class="page">
+        <div class="owner-grid">
+          <article class="admin-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Owner panel</p>
+                <p class="section-subtitle">Kelola akun admin, promosi user, dan joki internal.</p>
+              </div>
+            </div>
+            <div id="ownerOverviewStats" class="detail-meta"></div>
+          </article>
+
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Manajemen akses & joki</p>
+                <p class="section-subtitle">Pindahkan akun yang sudah ada menjadi admin atau kembali menjadi user. Bagian bawah menambahkan data joki internal sebagai katalog layanan, bukan pesanan.</p>
+              </div>
+            </div>
+
+            <form id="roleChangeForm" class="status-control">
+              <label>
+                <span>Akun yang akan diubah</span>
+                <select id="ownerAccountSelect"></select>
+              </label>
+              <label>
+                <span>Role baru</span>
+                <select id="ownerTargetRole">
+                  <option value="admin">Admin</option>
+                  <option value="user">User</option>
+                </select>
+              </label>
+              <button type="submit" class="primary-btn">Simpan perubahan role</button>
+            </form>
+
+            <form id="createServiceForm" class="status-control">
+              <label>
+                <span>Nama layanan joki</span>
+                <input type="text" id="ownerServiceTitle" placeholder="Carry Rank & Progress" required />
+              </label>
+              <label>
+                <span>Kategori</span>
+                <input type="text" id="ownerServiceCategory" placeholder="Progress" required />
+              </label>
+              <label>
+                <span>Harga</span>
+                <input type="text" id="ownerServicePrice" placeholder="Rp 50.000 - 180.000" required />
+              </label>
+              <label>
+                <span>Durasi</span>
+                <input type="text" id="ownerServiceDuration" placeholder="2-6 jam" required />
+              </label>
+              <label>
+                <span>Joki internal</span>
+                <select id="ownerServiceJokiSelect"></select>
+              </label>
+              <label>
+                <span>Tag</span>
+                <input type="text" id="ownerServiceTag" placeholder="Paling laris" required />
+              </label>
+              <label>
+                <span>Status layanan</span>
+                <select id="ownerServiceStatus">
+                  <option value="Tersedia">Tersedia</option>
+                  <option value="Tidak tersedia">Tidak tersedia</option>
+                </select>
+              </label>
+              <label>
+                <span>Deskripsi layanan</span>
+                <textarea id="ownerServiceDescription" rows="3" placeholder="Jelaskan manfaat layanan dan cakupan pengerjaan"></textarea>
+              </label>
+              <label>
+                <span>Persyaratan layanan (pisahkan dengan koma)</span>
+                <textarea id="ownerServiceRequirements" rows="3" placeholder="User ID target, Password akun, Min. rank 30"></textarea>
+              </label>
+              <button type="submit" class="primary-btn">Tambah layanan joki</button>
+            </form>
+
+            <!-- Owner joki creation form removed per request -->
+          </article>
+
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Daftar admin aktif</p>
+                <p class="section-subtitle">Ringkasan admin dan performa kerja mereka.</p>
+              </div>
+            </div>
+            <div id="ownerAdminList" class="order-list"></div>
+          </article>
+
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Layanan joki owner</p>
+                <p class="section-subtitle">Daftar layanan yang tampil ke pengguna, beserta joki internal yang ditugaskan.</p>
+              </div>
+            </div>
+            <div id="ownerServiceList" class="order-list"></div>
+          </article>
+
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Daftar joki internal</p>
+                <p class="section-subtitle">Master data joki yang bisa dipakai admin.</p>
+              </div>
+            </div>
+            <div id="ownerJokiList" class="joki-directory"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="owner-monitor-view" class="page">
+        <div class="owner-monitor-grid">
+          <article class="admin-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Monitoring kerja admin</p>
+                <p class="section-subtitle">Pantau jumlah order, total nilai joki, dan komisi 90% per admin.</p>
+              </div>
+            </div>
+            <div id="ownerMonitorList" class="order-list"></div>
+          </article>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

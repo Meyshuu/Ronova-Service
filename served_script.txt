@@ -1,0 +1,770 @@
+const STORAGE_KEY = 'nve-joki-demo-db';
+const AUTH_KEY = 'nve-joki-demo-auth';
+const APP_VERSION = 'v1';
+
+const defaultData = {
+  users: [
+    {
+      id: 'user-demo',
+      username: 'demo',
+      password: '123456',
+      name: 'Demo Pengguna',
+      role: 'user',
+      balance: 250000,
+      bio: 'Pengguna demo untuk mencoba alur joki, pembayaran, dan status pesanan.',
+      phone: '0812-0000-1111',
+      email: 'demo@example.com'
+    }
+  ],
+  admins: [
+    { id: 'admin-main', username: 'admin', password: 'admin123', name: 'Admin Pro', email: 'admin@example.com', phone: '0813-0000-2222' }
+  ],
+  services: [
+    {
+      id: 'carry-rank',
+      title: 'Carry Rank & Progress',
+      category: 'Progress',
+      price: 'Rp 50.000 - 180.000',
+      duration: '2-6 jam',
+      joki: 'Kira',
+      description: 'Mendapatkan progres akun, naik rank, dan menyelesaikan objective tanpa kehilangan momentum.',
+      requirements: ['User ID target', 'Password akun', 'Min. rank 30'],
+      tag: 'Paling laris',
+      status: 'Tersedia'
+    },
+    {
+      id: 'boss-farm',
+      title: 'Boss Farm & Material Run',
+      category: 'Farm',
+      price: 'Rp 35.000 - 120.000',
+      duration: '1-3 jam',
+      joki: 'Alyra',
+      description: 'Layanan farming harian, material premium, dan clear challenge dengan tingkat keberhasilan tinggi.',
+      requirements: ['Akun aktif', 'Target material', 'Stamina cukup'],
+      tag: 'Rekomendasi',
+      status: 'Tersedia'
+    },
+    {
+      id: 'character-build',
+      title: 'Character Build & Team Setup',
+      category: 'Build',
+      price: 'Rp 70.000 - 220.000',
+      duration: '4-8 jam',
+      joki: 'Milo',
+      description: 'Optimasi rosters, rekomendasi build, dan setup rotasi untuk menghadapi konten sulit.',
+      requirements: ['Akun target', 'Preferensi build', 'Budget setup'],
+      tag: 'Premium',
+      status: 'Tersedia'
+    },
+    {
+      id: 'event-clear',
+      title: 'Event Clear & Event Trial',
+      category: 'Event',
+      price: 'Rp 45.000 - 160.000',
+      duration: '2-5 jam',
+      joki: 'Rhea',
+      description: 'Bantuan menyelesaikan event khusus, trial, dan reward harian secara efisien.',
+      requirements: ['User ID', 'Target event', 'Akun siap'],
+      tag: 'Event',
+      status: 'Tersedia'
+    },
+    {
+      id: 'account-boost',
+      title: 'Account Boost & Resource Recovery',
+      category: 'Recovery',
+      price: 'Rp 60.000 - 200.000',
+      duration: '3-7 jam',
+      joki: 'Sora',
+      description: 'Layanan pemulihan akun, boost resource, dan peningkatan daya saing akun.',
+      requirements: ['Akun target', 'Recovery plan', 'Password aman'],
+      tag: 'Recovery',
+      status: 'Tersedia'
+    },
+    {
+      id: 'daily-run',
+      title: 'Daily Run & Routine Loop',
+      category: 'Routine',
+      price: 'Rp 25.000 - 90.000',
+      duration: '1-2 jam',
+      joki: 'Noa',
+      description: 'Sesi rutin harian untuk menyelesaikan loop dengan cepat dan konsisten.',
+      requirements: ['Akun aktif', 'Target loop', 'Penjadwalan'],
+      tag: 'Daily',
+      status: 'Tersedia'
+    }
+  ],
+  orders: [
+    {
+      id: 'ORD-001',
+      userId: 'user-demo',
+      serviceId: 'carry-rank',
+      userIdTarget: 'AkunDemo123',
+      notes: 'Naik rank 1-2 tier, jangan ganti build.',
+      budget: 120000,
+      status: 'Menunggu Penugasan',
+      paymentStatus: 'Belum Dibayar',
+      createdAt: '2026-05-20',
+      assignedJoki: 'Kira',
+      acceptedBy: null,
+      acceptedByName: null
+    },
+    {
+      id: 'ORD-002',
+      userId: 'user-demo',
+      serviceId: 'boss-farm',
+      userIdTarget: 'AkunDemo123',
+      notes: 'Farming material primogem',
+      budget: 75000,
+      status: 'Proses Pengerjaan',
+      paymentStatus: 'Dibayar',
+      createdAt: '2026-05-25',
+      assignedJoki: 'Alyra',
+      acceptedBy: 'admin',
+      acceptedByName: 'Admin Pro'
+    }
+  ],
+  chats: [
+    { id: 'chat-001', sender: 'support', message: 'Halo! Ada yang bisa kami bantu? Silakan pilih layanan joki anda.' }
+  ],
+  jokiDirectory: [
+    {
+      name: 'Kira',
+      role: 'Carry Specialist',
+      rating: '4.9',
+      completed: 128,
+      status: 'Aktif',
+      bio: 'Ahli carry rank dan progress harian.',
+      jobs: [
+        { title: 'Carry Rank & Progress', status: 'Berhasil' },
+        { title: 'Event Clear & Event Trial', status: 'Proses Pengerjaan' }
+      ]
+    },
+    {
+      name: 'Alyra',
+      role: 'Boss Farm Pro',
+      rating: '4.8',
+      completed: 94,
+      status: 'Aktif',
+      bio: 'Spesialis farm material dan recovery run.',
+      jobs: [
+        { title: 'Boss Farm & Material Run', status: 'Berhasil' },
+        { title: 'Daily Run & Routine Loop', status: 'Diterima' }
+      ]
+    },
+    {
+      name: 'Milo',
+      role: 'Build Optimizer',
+      rating: '4.9',
+      completed: 63,
+      status: 'Onboarding',
+      bio: 'Menangani build karakter dan setup team terbaik.',
+      jobs: [
+        { title: 'Character Build & Team Setup', status: 'Proses Pengerjaan' }
+      ]
+    }
+  ]
+};
+
+const state = {
+  selectedServiceId: null,
+  pendingOrderId: null,
+  currentPage: 1,
+  itemsPerPage: 6,
+  currentUser: loadSession(),
+  view: 'home-view'
+};
+
+const channel = 'BroadcastChannel' in window ? new BroadcastChannel('nve-joki-demo') : null;
+
+function loadData() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      return { ...defaultData, ...JSON.parse(saved) };
+    }
+  } catch (error) {
+    console.warn('Failed to parse saved data', error);
+  }
+  return defaultData;
+}
+
+const db = loadData();
+
+function loadSession() {
+  try {
+    const saved = localStorage.getItem(AUTH_KEY);
+    return saved ? JSON.parse(saved) : null;
+  } catch (error) {
+    console.warn('Failed to parse saved auth session', error);
+    return null;
+  }
+}
+
+function persistSession() {
+  if (state.currentUser) {
+    localStorage.setItem(AUTH_KEY, JSON.stringify(state.currentUser));
+    channel?.postMessage({ type: 'auth-sync', payload: state.currentUser });
+  } else {
+    localStorage.removeItem(AUTH_KEY);
+    channel?.postMessage({ type: 'auth-sync', payload: null });
+  }
+}
+
+function persistData() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+  channel?.postMessage({ type: 'sync', payload: db });
+}
+
+window.addEventListener('storage', (event) => {
+  if (event.key === STORAGE_KEY && event.newValue) {
+    const incoming = JSON.parse(event.newValue);
+    Object.assign(db, incoming);
+    renderAll();
+  }
+
+  if (event.key === AUTH_KEY) {
+    state.currentUser = event.newValue ? JSON.parse(event.newValue) : null;
+    renderAll();
+  }
+});
+
+channel?.addEventListener('message', (event) => {
+  if (event.data?.type === 'sync' && event.data.payload) {
+    Object.assign(db, event.data.payload);
+    renderAll();
+  }
+
+  if (event.data?.type === 'auth-sync') {
+    state.currentUser = event.data.payload;
+    renderAll();
+  }
+});
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(value));
+}
+
+const STATUS_STYLES = {
+  'Menunggu Penugasan': 'pending',
+  'Diterima': 'progress',
+  'Proses Pengerjaan': 'progress',
+  'Berhasil': 'success',
+  'Gagal': 'failed'
+};
+
+const PAYMENT_STYLES = {
+  'Dibayar': 'payment-paid',
+  'Belum Dibayar': 'payment-pending'
+};
+
+function getStatusClass(status) {
+  return STATUS_STYLES[status] || 'pending';
+}
+
+function getPaymentClass(paymentStatus) {
+  return PAYMENT_STYLES[paymentStatus] || 'payment-pending';
+}
+
+function getCurrentUser() {
+  if (!state.currentUser) return null;
+  if (state.currentUser.role === 'admin') {
+    const admin = db.admins.find((entry) => entry.username === state.currentUser.username);
+    if (admin) {
+      return { ...admin, role: 'admin' };
+    }
+    return { ...state.currentUser, role: 'admin' };
+  }
+
+  const user = db.users.find((entry) => entry.username === state.currentUser.username);
+  if (user) {
+    return { ...user, role: 'user' };
+  }
+  return { ...state.currentUser, role: 'user' };
+}
+
+function canAccess(viewName) {
+  if (viewName === 'dashboard-view') return state.currentUser?.role === 'user';
+  if (viewName === 'admin-view') return state.currentUser?.role === 'admin';
+  return true;
+}
+
+function navigateTo(viewName) {
+  if (!canAccess(viewName)) {
+    if (viewName === 'dashboard-view') {
+      alert('Halaman dashboard hanya untuk pengguna. Silakan login sebagai pengguna.');
+    } else if (viewName === 'admin-view') {
+      alert('Halaman admin hanya untuk administrator. Silakan login sebagai admin.');
+    }
+    state.view = 'auth-view';
+    document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
+    document.getElementById('auth-view')?.classList.add('active');
+    renderAll();
+    return;
+  }
+
+  state.view = viewName;
+  document.querySelectorAll('.page').forEach((page) => page.classList.remove('active'));
+  const selectedPage = document.getElementById(viewName);
+  if (selectedPage) selectedPage.classList.add('active');
+
+  if (viewName === 'detail-view') {
+    document.getElementById('backToListBtn')?.focus();
+  }
+  renderAll();
+}
+
+function renderTopbar() {
+  const topNavArea = document.getElementById('topNavArea');
+  const topActions = document.getElementById('topActions');
+
+  if (!state.currentUser) {
+    topNavArea.innerHTML = '';
+    topActions.innerHTML = '<button class="nav-btn primary" data-view="auth-view">Login</button>';
+  } else if (state.currentUser.role === 'admin') {
+    topNavArea.innerHTML = `
+      <button class="nav-btn ${state.view === 'home-view' ? 'active' : ''}" data-view="home-view">Beranda</button>
+      <button class="nav-btn ${state.view === 'admin-view' ? 'active' : ''}" data-view="admin-view">Admin</button>
+      <button class="nav-btn ${state.view === 'admin-orders-view' ? 'active' : ''}" data-view="admin-orders-view">Orderan</button>
+    `;
+    topActions.innerHTML = `
+      <div class="user-pill" id="userPill">Akun: ${state.currentUser.username} (Admin)</div>
+      <button class="secondary-btn" id="logoutBtn">Logout</button>
+    `;
+  } else {
+    topNavArea.innerHTML = `
+      <button class="nav-btn ${state.view === 'home-view' ? 'active' : ''}" data-view="home-view">Beranda</button>
+      <button class="nav-btn ${state.view === 'dashboard-view' ? 'active' : ''}" data-view="dashboard-view">Dashboard</button>
+    `;
+    topActions.innerHTML = `
+      <div class="user-pill" id="userPill">Akun: ${state.currentUser.username} (User)</div>
+      <button class="secondary-btn" id="logoutBtn">Logout</button>
+    `;
+  }
+
+  topNavArea.querySelectorAll('[data-view]').forEach((button) => {
+    button.addEventListener('click', () => navigateTo(button.dataset.view));
+  });
+
+  const loginButton = topActions.querySelector('[data-view="auth-view"]');
+  loginButton?.addEventListener('click', () => navigateTo('auth-view'));
+
+  const logoutButton = document.getElementById('logoutBtn');
+  logoutButton?.addEventListener('click', () => {
+    state.currentUser = null;
+    persistSession();
+    navigateTo('home-view');
+  });
+}
+
+function renderServiceGrid() {
+  const grid = document.getElementById('serviceGrid');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = db.services.filter((service) =>
+    [service.title, service.category, service.joki, service.description].some((field) => field.toLowerCase().includes(search))
+  );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / state.itemsPerPage));
+  if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+  const startIndex = (state.currentPage - 1) * state.itemsPerPage;
+  const pageItems = filtered.slice(startIndex, startIndex + state.itemsPerPage);
+
+  document.getElementById('pageInfo').textContent = `Halaman ${state.currentPage} / ${totalPages}`;
+  document.getElementById('prevPageBtn').disabled = state.currentPage === 1;
+  document.getElementById('nextPageBtn').disabled = state.currentPage === totalPages;
+
+  grid.innerHTML = pageItems.map((service) => `
+    <article class="service-card" data-service-id="${service.id}">
+      <div class="service-title-row">
+        <div>
+          <div class="card-meta">
+            <span class="pill pill-primary">${service.category}</span>
+            <span class="pill pill-neutral">${service.status}</span>
+          </div>
+          <h3>${service.title}</h3>
+        </div>
+        <span class="pill pill-warning">${service.tag}</span>
+      </div>
+      <p>${service.description}</p>
+      <div class="card-meta">
+        <span class="pill pill-success">Joki: ${service.joki}</span>
+      </div>
+      <div class="card-footer">
+        <div>
+          <div class="card-price">${service.price}</div>
+          <p class="item-subtle">Durasi ${service.duration}</p>
+        </div>
+        <button class="small-btn">Lihat detail</button>
+      </div>
+    </article>
+  `).join('');
+
+  grid.querySelectorAll('.service-card').forEach((card) => {
+    card.addEventListener('click', () => {
+      const serviceId = card.dataset.serviceId;
+      state.selectedServiceId = serviceId;
+      renderDetail();
+      navigateTo('detail-view');
+    });
+  });
+}
+
+function renderDetail() {
+  const service = db.services.find((item) => item.id === state.selectedServiceId);
+  if (!service) return;
+
+  document.getElementById('detailCategory').textContent = service.category;
+  document.getElementById('detailTag').textContent = service.status;
+  document.getElementById('detailTitle').textContent = service.title;
+  document.getElementById('detailDescription').textContent = service.description;
+  document.getElementById('detailPrice').textContent = service.price;
+  document.getElementById('detailDuration').textContent = service.duration;
+  document.getElementById('detailJoki').textContent = service.joki;
+  document.getElementById('detailRequirements').innerHTML = service.requirements.map((item) => `<li>${item}</li>`).join('');
+
+  const chatBox = document.getElementById('customerChatBox');
+  chatBox.innerHTML = db.chats.map((entry) => `<div class="chat-bubble ${entry.sender}">${entry.sender === 'support' ? 'Support' : 'You'}: ${entry.message}</div>`).join('');
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  document.getElementById('paymentStatus').textContent = 'Belum bayar';
+  document.getElementById('paymentStatus').style.color = 'var(--warning)';
+}
+
+function renderDashboard() {
+  const user = getCurrentUser();
+
+  const profileSummary = document.getElementById('profileSummary');
+  if (!user || user.role !== 'user') {
+    profileSummary.innerHTML = '<p class="body-copy">Akses dashboard hanya untuk pengguna. Silakan login dengan akun pengguna.</p>';
+    document.getElementById('userBalance').textContent = '0';
+    document.getElementById('userOrdersList').innerHTML = '<p class="body-copy">Belum ada pesanan.</p>';
+    return;
+  }
+
+  profileSummary.innerHTML = `
+    <p class="section-title">${user.name}</p>
+    <p class="body-copy">@${user.username} ΓÇó ${user.email || 'email belum diisi'} ΓÇó ${user.phone}</p>
+    <p class="body-copy">${user.bio}</p>
+    <div class="detail-meta">
+      <div class="meta-box"><p class="meta-label">Saldo</p><p class="meta-value">${formatCurrency(user.balance)}</p></div>
+      <div class="meta-box"><p class="meta-label">Role</p><p class="meta-value">${user.role.toUpperCase()}</p></div>
+      <div class="meta-box"><p class="meta-label">Status</p><p class="meta-value">Aktif</p></div>
+    </div>
+  `;
+  document.getElementById('userBalance').textContent = formatCurrency(user.balance);
+
+  const userOrders = db.orders.filter((order) => order.userId === user.id);
+  document.getElementById('userOrdersList').innerHTML = userOrders.map((order) => {
+    const service = db.services.find((item) => item.id === order.serviceId);
+    return `
+      <article class="order-item">
+        <div class="order-head">
+          <strong>#${order.id} ΓÇó ${service?.title || 'Layanan'}</strong>
+          <div class="order-badges">
+            <span class="status-badge ${getStatusClass(order.status)}">${order.status}</span>
+            <span class="status-badge ${getPaymentClass(order.paymentStatus)}">${order.paymentStatus}</span>
+          </div>
+        </div>
+        <div class="order-body">
+          <span class="item-subtle">Joki: ${order.assignedJoki}</span>
+          <span class="item-subtle">Penugasan: ${order.acceptedByName ? order.acceptedByName : 'Menunggu admin mengambil order'}</span>
+          <span class="item-subtle">Budget: ${formatCurrency(order.budget)}</span>
+          <span class="item-subtle">Tanggal: ${order.createdAt}</span>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+function renderAdmin() {
+  const admin = getCurrentUser();
+  if (!admin || admin.role !== 'admin') {
+    document.getElementById('jokiDirectory').innerHTML = '<p class="body-copy">Akses admin hanya untuk administrator. Silakan login sebagai admin.</p>';
+    document.getElementById('adminOrdersList').innerHTML = '<p class="body-copy">Tidak ada data pesanan untuk ditampilkan.</p>';
+    document.getElementById('orderSelect').innerHTML = '<option value="">Tidak ada pesanan</option>';
+    return;
+  }
+
+  document.getElementById('jokiDirectory').innerHTML = db.jokiDirectory.map((joki) => `
+    <div class="joki-item">
+      <div class="service-title-row">
+        <div>
+          <strong>${joki.name} ΓÇó ${joki.role}</strong>
+          <div class="item-subtle">Rating ${joki.rating} ΓÇó ${joki.completed} pekerjaan selesai</div>
+        </div>
+        <span class="pill pill-success">${joki.status}</span>
+      </div>
+      <p class="body-copy">${joki.bio}</p>
+      <div class="card-meta">
+        ${joki.jobs.map((job) => `<span class="pill pill-neutral">${job.title}: ${job.status}</span>`).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('adminOrdersList').innerHTML = db.orders.map((order) => {
+    const service = db.services.find((item) => item.id === order.serviceId);
+    return `
+      <article class="order-item">
+        <div class="order-head">
+          <strong>#${order.id} ΓÇó ${service?.title || 'Layanan'}</strong>
+          <div class="order-badges">
+            <span class="status-badge ${getStatusClass(order.status)}">${order.status}</span>
+            <span class="status-badge ${getPaymentClass(order.paymentStatus)}">${order.paymentStatus}</span>
+          </div>
+        </div>
+        <div class="order-body">
+          <span class="item-subtle">Pengguna: ${order.userIdTarget} ΓÇó Joki: ${order.assignedJoki}</span>
+          <span class="item-subtle">Penugasan: ${order.acceptedByName ? order.acceptedByName : 'Belum diambil'}</span>
+          <span class="item-subtle">Budget: ${formatCurrency(order.budget)} ΓÇó ${order.createdAt}</span>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  const orderSelect = document.getElementById('orderSelect');
+  orderSelect.innerHTML = db.orders.map((order) => `<option value="${order.id}">${order.id} - ${db.services.find((item) => item.id === order.serviceId)?.title || 'Layanan'}</option>`).join('');
+}
+
+function renderAdminOrdersPage() {
+  const admin = getCurrentUser();
+  if (!admin || admin.role !== 'admin') {
+    document.getElementById('adminQueueList').innerHTML = '<p class="body-copy">Akses antrean orderan hanya untuk administrator.</p>';
+    document.getElementById('adminAcceptedOrdersList').innerHTML = '<p class="body-copy">Tidak ada orderan yang diambil.</p>';
+    return;
+  }
+
+  const availableOrders = db.orders.filter((order) => !order.acceptedBy);
+  const acceptedOrders = db.orders.filter((order) => order.acceptedBy === admin.username);
+
+  document.getElementById('adminQueueList').innerHTML = availableOrders.map((order) => {
+    const service = db.services.find((item) => item.id === order.serviceId);
+    return `
+      <article class="order-item">
+        <div class="order-head">
+          <strong>#${order.id} ΓÇó ${service?.title || 'Layanan'}</strong>
+          <div class="order-badges">
+            <span class="status-badge ${getStatusClass(order.status)}">${order.status}</span>
+            <span class="status-badge ${getPaymentClass(order.paymentStatus)}">${order.paymentStatus}</span>
+          </div>
+        </div>
+        <div class="order-body">
+          <span class="item-subtle">Pengguna: ${order.userIdTarget} ΓÇó Joki: ${order.assignedJoki}</span>
+          <span class="item-subtle">Budget: ${formatCurrency(order.budget)} ΓÇó ${order.createdAt}</span>
+          <span class="item-subtle">Catatan: ${order.notes || 'Tidak ada catatan'}</span>
+        </div>
+        <button class="primary-btn claim-order-btn" data-order-id="${order.id}">Ambil order</button>
+      </article>
+    `;
+  }).join('');
+
+  document.getElementById('adminAcceptedOrdersList').innerHTML = acceptedOrders.map((order) => {
+    const service = db.services.find((item) => item.id === order.serviceId);
+    return `
+      <article class="order-item">
+        <div class="order-head">
+          <strong>#${order.id} ΓÇó ${service?.title || 'Layanan'}</strong>
+          <div class="order-badges">
+            <span class="status-badge ${getStatusClass(order.status)}">${order.status}</span>
+            <span class="status-badge ${getPaymentClass(order.paymentStatus)}">${order.paymentStatus}</span>
+          </div>
+        </div>
+        <div class="order-body">
+          <span class="item-subtle">Pengguna: ${order.userIdTarget} ΓÇó Joki: ${order.assignedJoki}</span>
+          <span class="item-subtle">Budget: ${formatCurrency(order.budget)} ΓÇó ${order.createdAt}</span>
+        </div>
+      </article>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.claim-order-btn').forEach((button) => {
+    button.addEventListener('click', () => {
+      const orderId = button.dataset.orderId;
+      const order = db.orders.find((entry) => entry.id === orderId);
+      if (!order) return;
+      order.acceptedBy = admin.username;
+      order.acceptedByName = admin.name;
+      order.status = 'Diterima';
+      persistData();
+      renderAll();
+      alert(`Order ${orderId} berhasil diambil oleh ${admin.name}.`);
+    });
+  });
+}
+
+function renderAll() {
+  renderTopbar();
+  renderServiceGrid();
+  renderDashboard();
+  renderAdmin();
+  renderAdminOrdersPage();
+}
+
+function handleLogin(username, password) {
+  const admin = db.admins.find((entry) => entry.username === username && entry.password === password);
+  if (admin) {
+    state.currentUser = { username: admin.username, role: 'admin', name: admin.name };
+    persistSession();
+    navigateTo('admin-orders-view');
+    alert(`Login admin berhasil sebagai ${admin.name}.`);
+    return true;
+  }
+
+  const user = db.users.find((entry) => entry.username === username && entry.password === password);
+  if (user) {
+    state.currentUser = { username: user.username, role: 'user', name: user.name };
+    persistSession();
+    navigateTo('dashboard-view');
+    alert(`Login pengguna berhasil sebagai ${user.name}.`);
+    return true;
+  }
+
+  alert('Login gagal. Cek kredensial demo.');
+  return false;
+}
+
+function registerUser(username, password, name, email, phone) {
+  if (db.users.some((user) => user.username === username)) {
+    alert('Username sudah digunakan.');
+    return;
+  }
+  db.users.push({
+    id: `user-${Date.now()}`,
+    username,
+    password,
+    name,
+    role: 'user',
+    balance: 100000,
+    bio: 'Akun baru dibuat dari demo web.',
+    email,
+    phone
+  });
+  persistData();
+  alert('Akun berhasil dibuat. Silakan login.');
+}
+
+function attachEvents() {
+  document.getElementById('searchInput').addEventListener('input', () => {
+    state.currentPage = 1;
+    renderServiceGrid();
+  });
+  document.getElementById('prevPageBtn').addEventListener('click', () => {
+    state.currentPage = Math.max(1, state.currentPage - 1);
+    renderServiceGrid();
+  });
+  document.getElementById('nextPageBtn').addEventListener('click', () => {
+    state.currentPage = Math.min(Math.ceil(db.services.length / state.itemsPerPage), state.currentPage + 1);
+    renderServiceGrid();
+  });
+  document.getElementById('backToListBtn').addEventListener('click', () => navigateTo('home-view'));
+
+  document.getElementById('orderForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const user = getCurrentUser();
+    if (!user || user.role !== 'user') {
+      alert('Silakan login sebagai pengguna untuk membuat pesanan.');
+      navigateTo('auth-view');
+      return;
+    }
+
+    const service = db.services.find((item) => item.id === state.selectedServiceId);
+    if (!service) return;
+
+    const order = {
+      id: `ORD-${String(db.orders.length + 1).padStart(3, '0')}`,
+      userId: user.id,
+      serviceId: service.id,
+      userIdTarget: document.getElementById('orderUserId').value.trim(),
+      notes: document.getElementById('orderNotes').value.trim(),
+      budget: Number(document.getElementById('orderBudget').value),
+      status: 'Menunggu Penugasan',
+      paymentStatus: 'Belum Dibayar',
+      createdAt: new Date().toISOString().slice(0, 10),
+      assignedJoki: service.joki
+    };
+
+    db.orders.unshift(order);
+    state.pendingOrderId = order.id;
+    persistData();
+    renderAll();
+    document.getElementById('paymentStatus').textContent = 'Pesanan dibuat dan menunggu penugasan. Lanjutkan pembayaran dari dashboard.';
+    document.getElementById('paymentStatus').style.color = 'var(--success)';
+    alert(`Pesanan ${order.id} berhasil dibuat. Status: Menunggu Penugasan`);
+  });
+
+  document.getElementById('quickPayBtn').addEventListener('click', () => {
+    const user = getCurrentUser();
+    if (!user || user.role !== 'user') {
+      alert('Login sebagai pengguna diperlukan untuk pembayaran.');
+      navigateTo('auth-view');
+      return;
+    }
+    const budget = Number(document.getElementById('orderBudget').value || 0);
+    if (!budget) {
+      alert('Masukkan nominal budget terlebih dahulu.');
+      return;
+    }
+    if (Number(user.balance || 0) < budget) {
+      alert('Saldo tidak mencukupi untuk pembayaran ini.');
+      return;
+    }
+    user.balance = Number(user.balance) - budget;
+    const order = db.orders.find((entry) => entry.id === state.pendingOrderId) || db.orders[0];
+    if (order) {
+      order.paymentStatus = 'Dibayar';
+      order.status = 'Menunggu Penugasan';
+      persistData();
+    }
+    persistData();
+    renderAll();
+    document.getElementById('paymentStatus').textContent = `Pembayaran berhasil: ${formatCurrency(budget)} telah dipotong dari saldo.`;
+    document.getElementById('paymentStatus').style.color = 'var(--success)';
+    state.pendingOrderId = null;
+  });
+
+  document.getElementById('sendChatBtn').addEventListener('click', () => {
+    const input = document.getElementById('chatMessageInput');
+    const message = input.value.trim();
+    if (!message) return;
+    db.chats.push({ id: `chat-${Date.now()}`, sender: 'user', message });
+    db.chats.push({ id: `chat-${Date.now()}-support`, sender: 'support', message: 'Terima kasih, tim kami akan menindaklanjuti pesan ini.' });
+    persistData();
+    renderDetail();
+    input.value = '';
+  });
+
+  document.getElementById('loginForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    handleLogin(username, password);
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    registerUser(
+      document.getElementById('registerUsername').value.trim(),
+      document.getElementById('registerPassword').value.trim(),
+      document.getElementById('registerName').value.trim(),
+      document.getElementById('registerEmail').value.trim(),
+      document.getElementById('registerPhone').value.trim()
+    );
+    document.getElementById('registerForm').reset();
+  });
+
+
+  document.getElementById('applyStatusBtn').addEventListener('click', () => {
+    const selected = document.getElementById('orderSelect').value;
+    const newStatus = document.getElementById('statusSelect').value;
+    const order = db.orders.find((entry) => entry.id === selected);
+    if (order) {
+      order.status = newStatus;
+      persistData();
+      renderAll();
+      alert(`Status pesanan ${selected} diperbarui menjadi ${newStatus}.`);
+    }
+  });
+}
+
+attachEvents();
+renderAll();
+const defaultView = state.currentUser?.role === 'admin' ? 'admin-view' : state.currentUser?.role === 'user' ? 'dashboard-view' : 'home-view';
+navigateTo(defaultView);
