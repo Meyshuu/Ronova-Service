@@ -1251,7 +1251,58 @@ function adminSelectOrderChat(orderId) {
   if (orderSelect) {
     orderSelect.value = orderId;
   }
+
+  // Prefill final price input from order.budget (existing field)
+  const priceInput = document.getElementById('adminOrderFinalPrice');
+  const order = db.orders.find((o) => o.id === orderId);
+  if (priceInput && order) {
+    priceInput.value = order.budget != null ? String(order.budget) : '';
+  }
+
   adminRenderOrderChat(orderId);
+}
+
+
+function adminConfirmPriceAndPayment(orderId) {
+  const admin = getCurrentUser();
+  if (!admin || admin.role !== 'admin') {
+    return alert('Akses hanya untuk admin.');
+  }
+
+  const order = db.orders.find((entry) => entry.id === orderId);
+  if (!order) {
+    return alert('Order tidak ditemukan.');
+  }
+
+  const priceInput = document.getElementById('adminOrderFinalPrice');
+  const msgEl = document.getElementById('adminPricePaymentMsg');
+  if (!priceInput) return;
+
+  const raw = priceInput.value;
+  const finalPrice = Number(raw);
+  if (!raw || Number.isNaN(finalPrice) || finalPrice <= 0) {
+    if (msgEl) msgEl.textContent = 'Harga final harus diisi dengan angka > 0.';
+    alert('Harga final harus diisi dengan angka > 0.');
+    return;
+  }
+
+  order.budget = finalPrice;
+  // Ensure customer can pay via dashboard
+  if (!order.paymentStatus || order.paymentStatus === 'Dibayar') {
+    order.paymentStatus = 'Belum Dibayar';
+  } else {
+    order.paymentStatus = 'Belum Dibayar';
+  }
+  // If order previously in completion flow, keep status as is.
+
+  // If order not yet taken, set status to Menunggu Penugasan if needed.
+  order.status = order.status || 'Menunggu Penugasan';
+
+  persistData();
+  renderAll();
+
+  if (msgEl) msgEl.textContent = `Harga final dikonfirmasi: ${formatCurrency(finalPrice)}. Customer bisa bayar via QRIS di dashboard.`;
+  alert(`Harga final untuk ${orderId} dikonfirmasi. Customer bisa bayar via QRIS di dashboard.`);
 }
 
 function adminSubmitCompletionRequest(orderId) {
@@ -1259,6 +1310,7 @@ function adminSubmitCompletionRequest(orderId) {
   if (!admin || admin.role !== 'admin') {
     return alert('Akses hanya untuk admin.');
   }
+
   const order = db.orders.find((entry) => entry.id === orderId);
   if (!order) {
     return alert('Order tidak ditemukan.');
@@ -1519,12 +1571,27 @@ function attachEvents() {
     }
   });
 
+  // Admin: konfirmasi harga & pembayaran
+  const confirmPriceBtn = document.getElementById('adminConfirmPricePaymentBtn');
+  const priceInputEl = document.getElementById('adminOrderFinalPrice');
+  if (confirmPriceBtn && priceInputEl) {
+    confirmPriceBtn.addEventListener('click', () => {
+      const orderId = document.getElementById('orderSelect')?.value;
+      if (!orderId) {
+        alert('Pilih pesanan terlebih dahulu.');
+        return;
+      }
+      adminConfirmPriceAndPayment(orderId);
+    });
+  }
+
   const sendBtn = document.getElementById('sendAdminOrderChatBtn');
   const inputEl = document.getElementById('adminOrderChatMessageInput');
   if (sendBtn && inputEl) {
     sendBtn.addEventListener('click', () => {
       const admin = getCurrentUser();
       if (!admin || admin.role !== 'admin') return;
+
 
       const orderSelect = document.getElementById('orderSelect');
       const orderId = orderSelect?.value;

@@ -286,6 +286,23 @@
               <p class="body-copy" style="margin-top:8px; font-size:0.95rem; color:var(--text-muted);">Penyelesaian order harus dikonfirmasi owner melalui permintaan selesai.</p>
             </div>
 
+            <div class="price-payment-panel" style="margin-top:18px;">
+              <div class="section-heading" style="margin-bottom:10px;">
+                <div>
+                  <p class="section-title">Konfirmasi harga & pembayaran</p>
+                  <p class="section-subtitle">Set harga final untuk order, lalu customer bayar via QRIS.</p>
+                </div>
+              </div>
+              <div class="status-control">
+                <label>
+                  <span>Harga final (IDR)</span>
+                  <input type="number" id="adminOrderFinalPrice" placeholder="mis. 50000" min="0" step="1000" />
+                </label>
+                <button class="primary-btn" id="adminConfirmPricePaymentBtn" type="button">Konfirmasi harga & bayar via QRIS</button>
+              </div>
+              <p id="adminPricePaymentMsg" class="body-copy" style="margin-top:8px; color:var(--text-muted);"></p>
+            </div>
+
             <div class="chat-panel" style="margin-top:18px;">
               <div class="chat-head">
                 <div>
@@ -302,6 +319,7 @@
           </article>
         </div>
       </section>
+
 
       <section id="admin-orders-view" class="page">
         <div class="admin-orders-grid">
