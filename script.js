@@ -1479,9 +1479,14 @@ function attachEvents() {
     const file = fileInput?.files?.[0] || null;
     if (!message && !file) return;
 
-    const attachment = file
-      ? { fileName: file.name, fileType: file.type || 'application/octet-stream', fileSize: file.size || 0 }
-      : null;
+      const isAllowed = file && /^image\//.test(file.type);
+      if (file && !isAllowed) {
+        alert('Hanya file gambar yang diperbolehkan (jpg/png/jpeg/gif/webp).');
+        return;
+      }
+      const attachment = file
+        ? { fileName: file.name, fileType: file.type || 'application/octet-stream', fileSize: file.size || 0 }
+        : null;
 
     db.chats.push({ id: `chat-${Date.now()}`, sender: 'user', message, attachment });
     db.chats.push({ id: `chat-${Date.now()}-support`, sender: 'support', message: 'Terima kasih, tim kami akan menindaklanjuti pesan ini.', attachment: null });
@@ -1644,8 +1649,9 @@ function attachEvents() {
 
       const order = db.orders.find((o) => o.id === orderId);
       if (!order) return;
-      if (order.paymentStatus === 'Dibayar' || order.status === 'Berhasil') {
-        alert('Chat terkunci karena order selesai/dibayar.');
+      // Lock sending only when order finished (Berhasil)
+      if (order.status === 'Berhasil') {
+        alert('Chat terkunci karena order selesai.');
         return;
       }
 
