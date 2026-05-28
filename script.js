@@ -593,6 +593,10 @@ function renderDashboard() {
     profileSummary.innerHTML = '<p class="body-copy">Akses dashboard hanya untuk pengguna. Silakan login dengan akun pengguna.</p>';
     document.getElementById('userBalance').textContent = '0';
     document.getElementById('userOrdersList').innerHTML = '<p class="body-copy">Belum ada pesanan.</p>';
+    const chatHint = document.getElementById('customerOrderChatHint');
+    const chatBox = document.getElementById('customerOrderChatBox');
+    if (chatBox) chatBox.innerHTML = '';
+    if (chatHint) chatHint.textContent = 'Chat order hanya tersedia untuk pengguna.';
     return;
   }
 
@@ -613,14 +617,22 @@ function renderDashboard() {
   document.getElementById('balanceMessage').textContent = 'Pembayaran dilakukan lewat QRIS custom. Klik Bayar via QRIS untuk memproses pembayaran.';
 
   const userOrders = db.orders.filter((order) => order.userId === persistedUser.id);
+  const chatBoxEl = document.getElementById('customerOrderChatBox');
+  const chatHintEl = document.getElementById('customerOrderChatHint');
+  const selectedOrderId = state.pendingOrderId || (userOrders[0] ? userOrders[0].id : null);
+
   if (!userOrders.length) {
     document.getElementById('userOrdersList').innerHTML = '<p class="body-copy">Belum ada pesanan.</p>';
+    if (chatBoxEl) chatBoxEl.innerHTML = '';
+    if (chatHintEl) chatHintEl.textContent = 'Buat pesanan terlebih dahulu untuk melihat chat order.';
   } else {
     document.getElementById('userOrdersList').innerHTML = userOrders.map((order) => {
       const service = db.services.find((item) => item.id === order.serviceId);
       const payButton = order.paymentStatus === 'Belum Dibayar'
         ? `<button class="small-btn pay-order-btn" data-order-id="${order.id}">Bayar via QRIS</button>`
         : '';
+      const chatButton = `<button class="small-btn" data-chat-order-id="${order.id}">${order.id === selectedOrderId ? 'Chat (aktif)' : 'Buka chat'}</button>`;
+
       return `
         <article class="order-item">
           <div class="order-head">
@@ -636,10 +648,14 @@ function renderDashboard() {
             <span class="item-subtle">Budget: ${formatCurrency(order.budget)}</span>
             <span class="item-subtle">Tanggal: ${order.createdAt}</span>
           </div>
-          <div class="order-actions">${payButton}</div>
+          <div class="order-actions">${payButton} ${chatButton}</div>
         </article>
       `;
     }).join('');
+
+    if (selectedOrderId) {
+      renderCustomerOrderChat(selectedOrderId);
+    }
   }
 
   document.querySelectorAll('.pay-order-btn').forEach((button) => {
@@ -658,6 +674,57 @@ function renderDashboard() {
       renderQrisPayment(order);
     });
   });
+
+  document.querySelectorAll('[data-chat-order-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const orderId = button.dataset.chatOrderId;
+      state.pendingOrderId = orderId;
+      renderCustomerOrderChat(orderId);
+    });
+  });
+
+  // kirim chat order (customer)
+  const sendCustBtn = document.getElementById('sendCustomerOrderChatBtn');
+  const custMsgInput = document.getElementById('customerOrderChatMessageInput');
+  const custFileInput = document.getElementById('customerOrderChatFileInput');
+
+  if (sendCustBtn && custMsgInput) {
+    sendCustBtn.onclick = null;
+    sendCustBtn.addEventListener('click', () => {
+      const adminOrderId = state.pendingOrderId;
+      if (!adminOrderId) {
+        alert('Pilih order terlebih dahulu untuk chat.');
+        return;
+      }
+      const message = custMsgInput.value.trim();
+      const file = custFileInput?.files?.[0] || null;
+      if (!message && !file) return;
+
+      if (file && !/^image\//.test(file.type)) {
+        alert('Hanya file gambar yang diperbolehkan.');
+        return;
+      }
+
+      const attachment = file
+        ? { fileName: file.name, fileType: file.type || 'application/octet-stream', fileSize: file.size || 0 }
+        : null;
+
+      db.orderChats = db.orderChats || [];
+      db.orderChats.push({
+        id: `orderchat-${Date.now()}`,
+        orderId: adminOrderId,
+        sender: 'customer',
+        message,
+        attachment,
+        createdAt: new Date().toISOString()
+      });
+
+      persistData();
+      renderCustomerOrderChat(adminOrderId);
+      custMsgInput.value = '';
+      if (custFileInput) custFileInput.value = '';
+    });
+  }
 }
 
 function renderQrisPayment(order) {

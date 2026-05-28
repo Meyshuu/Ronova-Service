@@ -236,6 +236,25 @@
             </div>
             <div id="userOrdersList" class="order-list"></div>
           </article>
+
+          <article class="dashboard-card wide-card">
+            <div class="section-heading">
+              <div>
+                <p class="section-title">Chat order</p>
+                <p class="section-subtitle">Diskusi per order (customer vs admin).</p>
+              </div>
+            </div>
+            <div class="chat-panel" style="margin-top:0;">
+              <div id="customerOrderChatBox" class="chat-box"></div>
+              <div class="chat-input-row">
+                <input type="file" id="customerOrderChatFileInput" style="max-width:260px;" />
+                <input type="text" id="customerOrderChatMessageInput" placeholder="Tulis pesan..." />
+                <button id="sendCustomerOrderChatBtn" class="small-btn">Kirim</button>
+              </div>
+              <p id="customerOrderChatHint" class="body-copy" style="margin-top:8px; color:var(--text-muted);">Pilih order untuk melihat chat.</p>
+            </div>
+          </article>
+
         </div>
       </section>
 
