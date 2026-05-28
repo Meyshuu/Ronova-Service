@@ -572,7 +572,13 @@ function renderDetail() {
   document.getElementById('orderBudget').disabled = true;
 
   const chatBox = document.getElementById('customerChatBox');
-  chatBox.innerHTML = db.chats.map((entry) => `<div class="chat-bubble ${entry.sender}">${entry.sender === 'support' ? 'Support' : 'You'}: ${entry.message}</div>`).join('');
+  chatBox.innerHTML = db.chats.map((entry) => {
+    const fileBlock = entry.attachment?.fileName
+      ? `<div class="chat-attachment">📎 ${entry.attachment.fileName}</div>`
+      : '';
+    const text = entry.message ? entry.message : '';
+    return `<div class="chat-bubble ${entry.sender}">${entry.sender === 'support' ? 'Support' : 'You'}: ${text}${fileBlock}</div>`;
+  }).join('');
   chatBox.scrollTop = chatBox.scrollHeight;
 
   document.getElementById('paymentStatus').textContent = 'Belum bayar';
@@ -1232,7 +1238,11 @@ function adminRenderOrderChat(orderId) {
   const chatEntries = (db.orderChats || []).filter((c) => c.orderId === orderId);
   const lines = chatEntries.map((c) => {
     const who = c.sender === 'admin' ? 'Admin' : 'Customer';
-    return `<div class="chat-bubble ${c.sender === 'admin' ? 'admin' : 'customer'}">${who}: ${c.message}</div>`;
+    const fileBlock = c.attachment?.fileName
+      ? `<div class="chat-attachment">📎 ${c.attachment.fileName}</div>`
+      : '';
+    const text = c.message ? c.message : '';
+    return `<div class="chat-bubble ${c.sender === 'admin' ? 'admin' : 'customer'}">${who}: ${text}${fileBlock}</div>`;
   }).join('');
 
   chatBox.innerHTML = lines || '<p class="body-copy">Belum ada chat untuk order ini.</p>';
@@ -1463,13 +1473,21 @@ function attachEvents() {
 
   document.getElementById('sendChatBtn').addEventListener('click', () => {
     const input = document.getElementById('chatMessageInput');
+    const fileInput = document.getElementById('chatFileInput');
     const message = input.value.trim();
-    if (!message) return;
-    db.chats.push({ id: `chat-${Date.now()}`, sender: 'user', message });
-    db.chats.push({ id: `chat-${Date.now()}-support`, sender: 'support', message: 'Terima kasih, tim kami akan menindaklanjuti pesan ini.' });
+    const file = fileInput?.files?.[0] || null;
+    if (!message && !file) return;
+
+    const attachment = file
+      ? { fileName: file.name, fileType: file.type || 'application/octet-stream', fileSize: file.size || 0 }
+      : null;
+
+    db.chats.push({ id: `chat-${Date.now()}`, sender: 'user', message, attachment });
+    db.chats.push({ id: `chat-${Date.now()}-support`, sender: 'support', message: 'Terima kasih, tim kami akan menindaklanjuti pesan ini.', attachment: null });
     persistData();
     renderDetail();
     input.value = '';
+    if (fileInput) fileInput.value = '';
   });
 
   document.getElementById('loginForm').addEventListener('submit', (event) => {
@@ -1604,6 +1622,7 @@ function attachEvents() {
 
   const sendBtn = document.getElementById('sendAdminOrderChatBtn');
   const inputEl = document.getElementById('adminOrderChatMessageInput');
+  const fileInputEl = document.getElementById('adminOrderChatFileInput');
 
   if (sendBtn && inputEl) {
     sendBtn.addEventListener('click', () => {
@@ -1619,7 +1638,8 @@ function attachEvents() {
       }
 
       const message = inputEl.value.trim();
-      if (!message) return;
+      const file = fileInputEl?.files?.[0] || null;
+      if (!message && !file) return;
 
       const order = db.orders.find((o) => o.id === orderId);
       if (!order) return;
@@ -1629,11 +1649,16 @@ function attachEvents() {
       }
 
       db.orderChats = db.orderChats || [];
+      const attachment = file
+        ? { fileName: file.name, fileType: file.type || 'application/octet-stream', fileSize: file.size || 0 }
+        : null;
+
       db.orderChats.push({
         id: `orderchat-${Date.now()}`,
         orderId,
         sender: 'admin',
         message,
+        attachment,
         createdAt: new Date().toISOString()
       });
 
