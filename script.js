@@ -1291,9 +1291,16 @@ function renderAdminOrdersPage() {
   });
 }
 
+function isOrderChatLocked(order) {
+  // Rule: chat terkunci hanya saat order status "Berhasil".
+  // Payment "Dibayar" tidak mengunci chat.
+  return order?.status === 'Berhasil';
+}
+
 function adminRenderOrderChat(orderId) {
   const chatBox = document.getElementById('adminOrderChatBox');
   const input = document.getElementById('adminOrderChatMessageInput');
+  const fileInput = document.getElementById('adminOrderChatFileInput');
   if (!chatBox) return;
 
   const order = db.orders.find((o) => o.id === orderId);
@@ -1315,14 +1322,15 @@ function adminRenderOrderChat(orderId) {
   chatBox.innerHTML = lines || '<p class="body-copy">Belum ada chat untuk order ini.</p>';
   chatBox.scrollTop = chatBox.scrollHeight;
 
-  // Lock chat only when work is marked as selesai/berhasil.
-  // Payment "Dibayar" should NOT lock chat.
+  // Lock chat only when order status marked as Berhasil.
+  const disabled = isOrderChatLocked(order);
   if (input) {
-    const disabled = order.status === 'Berhasil';
     input.disabled = disabled;
     input.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan untuk customer...';
   }
+  if (fileInput) fileInput.disabled = disabled;
 }
+
 
 function adminSelectOrderChat(orderId) {
   const orderSelect = document.getElementById('orderSelect');
