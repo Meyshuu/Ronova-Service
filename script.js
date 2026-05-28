@@ -696,9 +696,18 @@ function renderDashboard() {
         alert('Pilih order terlebih dahulu untuk chat.');
         return;
       }
+
+      // Pastikan chat user benar-benar terkirim ke order yang sedang dipilih
+      // (sebelumnya ada bug ketika selectedOrderId berubah tapi state.pendingOrderId belum tersinkron)
+      if (typeof adminOrderId !== 'string' || !adminOrderId.trim()) {
+        alert('Order yang dipilih tidak valid. Pilih ulang order-nya.');
+        return;
+      }
+
       const message = custMsgInput.value.trim();
       const file = custFileInput?.files?.[0] || null;
       if (!message && !file) return;
+
 
       if (file && !/^image\//.test(file.type)) {
         alert('Hanya file gambar yang diperbolehkan.');
