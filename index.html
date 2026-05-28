@@ -264,10 +264,11 @@
           <article class="admin-card">
             <div class="section-heading">
               <div>
-                <p class="section-title">Perbarui status</p>
-                <p class="section-subtitle">Kelola lifecycle pesanan.</p>
+                <p class="section-title">Perbarui status & Chat order</p>
+                <p class="section-subtitle">Kelola lifecycle pesanan dan verifikasi data customer lewat chat.</p>
               </div>
             </div>
+
             <div class="status-control">
               <label>
                 <span>Pilih pesanan</span>
@@ -283,6 +284,20 @@
               </label>
               <button id="applyStatusBtn" class="primary-btn">Simpan perubahan</button>
               <p class="body-copy" style="margin-top:8px; font-size:0.95rem; color:var(--text-muted);">Penyelesaian order harus dikonfirmasi owner melalui permintaan selesai.</p>
+            </div>
+
+            <div class="chat-panel" style="margin-top:18px;">
+              <div class="chat-head">
+                <div>
+                  <p class="section-title">Chat order</p>
+                  <p class="section-subtitle">Verifikasi data customer dan update pengerjaan.</p>
+                </div>
+              </div>
+              <div id="adminOrderChatBox" class="chat-box"></div>
+              <div class="chat-input-row">
+                <input type="text" id="adminOrderChatMessageInput" placeholder="Tulis pesan untuk customer..." />
+                <button id="sendAdminOrderChatBtn" class="small-btn">Kirim</button>
+              </div>
             </div>
           </article>
         </div>

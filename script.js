@@ -102,6 +102,7 @@ const defaultData = {
   ],
   orders: [],
   chats: [],
+  orderChats: [],
   jokiDirectory: []
 };
 
@@ -449,7 +450,7 @@ function renderTopbar() {
       <button class="nav-btn ${state.view === 'home-view' ? 'active' : ''}" data-view="home-view">Beranda</button>
       <button class="nav-btn ${state.view === 'owner-view' ? 'active' : ''}" data-view="owner-view">Owner</button>
       <button class="nav-btn ${state.view === 'owner-monitor-view' ? 'active' : ''}" data-view="owner-monitor-view">Monitoring Admin</button>
-      <button class="nav-btn ${state.view === 'owner-trash-view' ? 'active' : ''}" data-view="owner-trash-view">Trash Joki</button>
+      <button class="nav-btn ${state.view === 'owner-trash-view' ? 'active' : ''}" data-view="owner-trash-view">Manage Joki</button>
     `;
     topActions.innerHTML = `
       <div class="user-pill" id="userPill">Akun: ${state.currentUser.username} (Owner)</div>
@@ -703,6 +704,8 @@ function renderAdmin() {
   const jokiDirectoryEl = document.getElementById('jokiDirectory');
   const adminOrdersListEl = document.getElementById('adminOrdersList');
   const orderSelectEl = document.getElementById('orderSelect');
+  const chatBoxEl = document.getElementById('adminOrderChatBox');
+
 
   if (!admin || admin.role !== 'admin') {
     adminDashboardMetricsEl.innerHTML = '';
@@ -711,8 +714,10 @@ function renderAdmin() {
     }
     adminOrdersListEl.innerHTML = '<p class="body-copy">Tidak ada data pesanan untuk ditampilkan.</p>';
     orderSelectEl.innerHTML = '<option value="">Tidak ada pesanan</option>';
+    if (chatBoxEl) chatBoxEl.innerHTML = '<p class="body-copy">Chat order tersedia saat memilih pesanan.</p>';
     return;
   }
+
 
   const metrics = getAdminMetrics(admin.username);
   adminDashboardMetricsEl.innerHTML = `
@@ -757,12 +762,23 @@ function renderAdmin() {
           <span class="item-subtle">Penugasan: ${order.acceptedByName ? order.acceptedByName : 'Belum diambil'}</span>
           <span class="item-subtle">Budget: ${formatCurrency(order.budget)} • ${order.createdAt}</span>
         </div>
+        <div class="order-actions">
+          <button class="small-btn" onclick="adminSelectOrderChat('${order.id}')">Chat order</button>
+        </div>
       </article>
     `;
   }).join('');
 
+
   const orderSelect = document.getElementById('orderSelect');
   orderSelect.innerHTML = db.orders.map((order) => `<option value="${order.id}">${order.id} - ${db.services.find((item) => item.id === order.serviceId)?.title || 'Layanan'}</option>`).join('');
+
+  // auto-load chat for selected order (if any)
+  if (chatBoxEl) {
+    const selectedOrderId = orderSelectEl?.value || orderSelect?.value;
+    if (selectedOrderId) adminRenderOrderChat(selectedOrderId);
+    else chatBoxEl.innerHTML = '<p class="body-copy">Pilih pesanan untuk melihat chat.</p>';
+  }
 }
 
 function renderOwner() {
@@ -952,6 +968,7 @@ function renderOwnerMonitoring() {
             <div class="order-actions">
               <button class="small-btn" onclick="ownerConfirmOrderCompletion('${o.id}')">Konfirmasi selesai</button>
               <button class="small-btn danger" onclick="ownerRejectOrderCompletion('${o.id}')">Tolak</button>
+              ${o.status === 'Gagal' ? `<button class="small-btn" onclick="ownerReapplyFailedCompletion('${o.id}')">Ajukan ulang</button>` : ''}
             </div>
           </article>
         `;
@@ -1023,9 +1040,24 @@ function ownerRejectOrderCompletion(orderId) {
   if (!order) return alert('Order tidak ditemukan.');
   if (order.status !== 'Menunggu Konfirmasi Owner') return alert('Order tidak dalam status permintaan konfirmasi.');
   order.status = 'Gagal';
+  order.completionRequest = order.completionRequest || {};
+  order.completionRequest.rejectedAt = new Date().toISOString();
   persistData();
   renderAll();
   alert(`Order ${orderId} ditolak dan ditandai gagal oleh owner.`);
+}
+
+function ownerReapplyFailedCompletion(orderId) {
+  const order = db.orders.find((o) => o.id === orderId);
+  if (!order) return alert('Order tidak ditemukan.');
+  if (order.status !== 'Gagal') return alert('Order harus berstatus Gagal.');
+
+  order.status = 'Menunggu Konfirmasi Owner';
+  order.completionRequest = order.completionRequest || {};
+  order.completionRequest.reappliedAt = new Date().toISOString();
+  persistData();
+  renderAll();
+  alert(`Order ${orderId} diajukan ulang ke owner.`);
 }
 
 function ownerDeleteOrder(orderId) {
@@ -1184,6 +1216,42 @@ function renderAdminOrdersPage() {
       alert(`Order ${orderId} berhasil diambil oleh ${admin.name}.`);
     });
   });
+}
+
+function adminRenderOrderChat(orderId) {
+  const chatBox = document.getElementById('adminOrderChatBox');
+  const input = document.getElementById('adminOrderChatMessageInput');
+  if (!chatBox) return;
+
+  const order = db.orders.find((o) => o.id === orderId);
+  if (!order) {
+    chatBox.innerHTML = '<p class="body-copy">Order tidak ditemukan.</p>';
+    return;
+  }
+
+  const chatEntries = (db.orderChats || []).filter((c) => c.orderId === orderId);
+  const lines = chatEntries.map((c) => {
+    const who = c.sender === 'admin' ? 'Admin' : 'Customer';
+    return `<div class="chat-bubble ${c.sender === 'admin' ? 'admin' : 'customer'}">${who}: ${c.message}</div>`;
+  }).join('');
+
+  chatBox.innerHTML = lines || '<p class="body-copy">Belum ada chat untuk order ini.</p>';
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  // If order already paid, disable input (based on request)
+  if (input) {
+    const disabled = order.paymentStatus === 'Dibayar' || order.status === 'Berhasil';
+    input.disabled = disabled;
+    input.placeholder = disabled ? 'Chat terkunci karena order selesai/dibayar.' : 'Tulis pesan untuk customer...';
+  }
+}
+
+function adminSelectOrderChat(orderId) {
+  const orderSelect = document.getElementById('orderSelect');
+  if (orderSelect) {
+    orderSelect.value = orderId;
+  }
+  adminRenderOrderChat(orderId);
 }
 
 function adminSubmitCompletionRequest(orderId) {
@@ -1450,6 +1518,47 @@ function attachEvents() {
       alert(`Status pesanan ${selected} diperbarui menjadi ${newStatus}.`);
     }
   });
+
+  const sendBtn = document.getElementById('sendAdminOrderChatBtn');
+  const inputEl = document.getElementById('adminOrderChatMessageInput');
+  if (sendBtn && inputEl) {
+    sendBtn.addEventListener('click', () => {
+      const admin = getCurrentUser();
+      if (!admin || admin.role !== 'admin') return;
+
+      const orderSelect = document.getElementById('orderSelect');
+      const orderId = orderSelect?.value;
+      if (!orderId) {
+        alert('Pilih pesanan terlebih dahulu.');
+        return;
+      }
+
+      const message = inputEl.value.trim();
+      if (!message) return;
+
+      const order = db.orders.find((o) => o.id === orderId);
+      if (!order) return;
+      if (order.paymentStatus === 'Dibayar' || order.status === 'Berhasil') {
+        alert('Chat terkunci karena order selesai/dibayar.');
+        return;
+      }
+
+      db.orderChats = db.orderChats || [];
+      db.orderChats.push({
+        id: `orderchat-${Date.now()}`,
+        orderId,
+        sender: 'admin',
+        message,
+        createdAt: new Date().toISOString()
+      });
+
+      inputEl.value = '';
+      persistData();
+      adminRenderOrderChat(orderId);
+
+      // (customer reply dapat ditambahkan kemudian bila diperlukan)
+    });
+  }
 }
 
 async function startApp() {
