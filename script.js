@@ -1381,11 +1381,12 @@ function adminConfirmPriceAndPayment(orderId) {
   }
   // If order previously in completion flow, keep status as is.
 
-  // If order not yet taken, set status to Menunggu Penugasan if needed.
-  order.status = order.status || 'Menunggu Penugasan';
+  // NOTE: Sesuai requirement: adminConfirmPrice hanya update budget & paymentStatus.
+  // order.status tidak diubah.
 
   persistData();
   renderAll();
+
 
   if (msgEl) msgEl.textContent = `Harga final dikonfirmasi: ${formatCurrency(finalPrice)}. Customer bisa bayar via QRIS di dashboard.`;
   alert(`Harga final untuk ${orderId} dikonfirmasi. Customer bisa bayar via QRIS di dashboard.`);
