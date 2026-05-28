@@ -163,15 +163,27 @@ async function loadData() {
   }
 
   try {
+    // Load app-wide state (orders/users/etc)
     const docRef = firebase.firestore().doc(FIREBASE_STATE_PATH);
     const snapshot = await docRef.get();
-    if (snapshot.exists) {
-      return { ...defaultData, ...snapshot.data() };
+
+    let stateData = snapshot.exists ? snapshot.data() : null;
+
+    // Load services from collection `services` (each doc is one service)
+    const servicesSnap = await firebase.firestore().collection('services').get();
+    const services = servicesSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    // Merge: stateData (if exists) + defaultData; then override services with Firestore collection
+    const merged = { ...defaultData, ...(stateData || {}), services };
+
+    // If dokumen belum ada, buat dokumen awal di Firestore (tanpa services field karena services berasal dari collection)
+    if (!snapshot.exists) {
+      const toSeed = { ...localData, services: [] };
+      await docRef.set(toSeed);
+      return { ...defaultData, ...(toSeed || {}), services };
     }
 
-    // Jika dokumen belum ada, buat dokumen awal di Firestore.
-    await docRef.set(localData);
-    return localData;
+    return merged;
   } catch (error) {
     console.warn('Failed to load Firebase data:', error);
   }
