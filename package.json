@@ -1,4 +1,12 @@
 {
+  "name": "ronova-service",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "server": "cd server && node index.js",
+    "deploy:functions": "cd functions && npx firebase-tools deploy --only functions --project web-joki-216fc"
+  },
   "dependencies": {
     "firebase": "^12.13.0"
   }

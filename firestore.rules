@@ -1,0 +1,11 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /appState/web-joki {
+      allow read: if true;
+      // This app currently uses no Firebase Auth. If you add auth,
+      // update this rule so only authorized users can write.
+      allow write: if true;
+    }
+  }
+}

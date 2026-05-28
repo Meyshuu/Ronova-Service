@@ -34,6 +34,8 @@ npx firebase emulators:start --only functions,firestore
 
 When deploying, ensure you have the Firebase CLI installed and authenticated (`firebase login`) and that the project in `.firebaserc` matches your Firebase project.
 
+For GitHub Actions deploy, add `FIREBASE_TOKEN` to repository secrets. This workflow deploys on every push to `main`.
+
 CI deploy:
 - Add `FIREBASE_TOKEN` to your GitHub repository secrets.
 - The workflow `.github/workflows/firebase-deploy.yml` will deploy your functions automatically on pushes to `main`.

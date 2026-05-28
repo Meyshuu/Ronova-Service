@@ -35,4 +35,4 @@ curl -X POST http://localhost:3000/webhook -H "Content-Type: application/json" -
 - `GET /qrcode/:orderId` -> HTML page showing QR image
 
 Security
-- In production verify incoming webhook signatures and restrict access.
+- In production verify incoming webhook signatures and restrict access.+- Use `WEBHOOK_SECRET` to protect the `/webhook` endpoint from unauthorized requests.
