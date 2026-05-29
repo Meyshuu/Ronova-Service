@@ -741,6 +741,47 @@ function renderDashboard() {
   }
 }
 
+function renderCustomerOrderChat(orderId) {
+  const chatBox = document.getElementById('customerOrderChatBox');
+  const input = document.getElementById('customerOrderChatMessageInput');
+  const fileInput = document.getElementById('customerOrderChatFileInput');
+  const hintEl = document.getElementById('customerOrderChatHint');
+
+  if (!chatBox) return;
+
+  const order = db.orders.find((o) => o.id === orderId);
+  if (!order) {
+    chatBox.innerHTML = '<p class="body-copy">Order tidak ditemukan.</p>';
+    if (hintEl) hintEl.textContent = 'Pilih order yang valid untuk melihat chat.';
+    if (input) input.disabled = true;
+    if (fileInput) fileInput.disabled = true;
+    return;
+  }
+
+  const chatEntries = (db.orderChats || []).filter((c) => c.orderId === orderId);
+  const lines = chatEntries.map((c) => {
+    const who = c.sender === 'admin' ? 'Admin' : 'Anda';
+    const fileBlock = c.attachment?.fileName
+      ? `<div class="chat-attachment">📎 ${c.attachment.fileName}</div>`
+      : '';
+    const text = c.message ? c.message : '';
+    // bubble customer/admin format
+    const bubbleRole = c.sender === 'admin' ? 'admin' : 'customer';
+    return `<div class="chat-bubble ${bubbleRole}">${who}: ${text}${fileBlock}</div>`;
+  }).join('');
+
+  chatBox.innerHTML = lines || '<p class="body-copy">Belum ada chat untuk order ini.</p>';
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  const disabled = isOrderChatLocked(order);
+  if (input) {
+    input.disabled = disabled;
+    input.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan...';
+  }
+  if (fileInput) fileInput.disabled = disabled;
+  if (hintEl) hintEl.textContent = ' ';
+}
+
 function renderMidtransPayment(order) {
   const amount = Number(order.budget || 0);
   // Try server-based QR generation first
