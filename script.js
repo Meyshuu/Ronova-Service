@@ -785,7 +785,8 @@ function renderMidtransPayment(order) {
   });
 }
 
-function renderAdmin() {
+function renderAdmin(){
+
   const admin = getCurrentUser();
   const adminDashboardMetricsEl = document.getElementById('adminDashboardMetrics');
   const jokiDirectoryEl = document.getElementById('jokiDirectory');
