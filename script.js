@@ -654,8 +654,11 @@ function renderDashboard() {
     }).join('');
 
     if (selectedOrderId) {
+      // Keep state.pendingOrderId in sync so chat click + send works reliably
+      state.pendingOrderId = selectedOrderId;
       renderCustomerOrderChat(selectedOrderId);
     }
+
   }
 
   document.querySelectorAll('.pay-order-btn').forEach((button) => {
