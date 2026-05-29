@@ -26,80 +26,7 @@ const defaultData = {
   owners: [],
   deletedOrders: [],
 
-  services: [
-    {
-      id: 'carry-rank',
-      title: 'Carry Rank & Progress',
-      category: 'Progress',
-      price: 'Rp 50.000 - 180.000',
-      duration: '2-6 jam',
-      joki: '',
-      description: 'Mendapatkan progres akun, naik rank, dan menyelesaikan objective tanpa kehilangan momentum.',
-      requirements: ['User ID target', 'Password akun', 'Min. rank 30'],
-      tag: 'Paling laris',
-      status: 'Tersedia'
-    },
-    {
-      id: 'boss-farm',
-      title: 'Boss Farm & Material Run',
-      category: 'Farm',
-      price: 'Rp 35.000 - 120.000',
-      duration: '1-3 jam',
-        joki: '',
-      description: 'Layanan farming harian, material premium, dan clear challenge dengan tingkat keberhasilan tinggi.',
-      requirements: ['Akun aktif', 'Target material', 'Stamina cukup'],
-      tag: 'Rekomendasi',
-      status: 'Tersedia'
-    },
-    {
-      id: 'character-build',
-      title: 'Character Build & Team Setup',
-      category: 'Build',
-      price: 'Rp 70.000 - 220.000',
-      duration: '4-8 jam',
-      joki: '',
-      description: 'Optimasi rosters, rekomendasi build, dan setup rotasi untuk menghadapi konten sulit.',
-      requirements: ['Akun target', 'Preferensi build', 'Budget setup'],
-      tag: 'Premium',
-      status: 'Tersedia'
-    },
-    {
-      id: 'event-clear',
-      title: 'Event Clear & Event Trial',
-      category: 'Event',
-      price: 'Rp 45.000 - 160.000',
-      duration: '2-5 jam',
-      joki: '',
-      description: 'Bantuan menyelesaikan event khusus, trial, dan reward harian secara efisien.',
-      requirements: ['User ID', 'Target event', 'Akun siap'],
-      tag: 'Event',
-      status: 'Tersedia'
-    },
-    {
-      id: 'account-boost',
-      title: 'Account Boost & Resource Recovery',
-      category: 'Recovery',
-      price: 'Rp 60.000 - 200.000',
-      duration: '3-7 jam',
-      joki: '',
-      description: 'Layanan pemulihan akun, boost resource, dan peningkatan daya saing akun.',
-      requirements: ['Akun target', 'Recovery plan', 'Password aman'],
-      tag: 'Recovery',
-      status: 'Tersedia'
-    },
-    {
-      id: 'daily-run',
-      title: 'Daily Run & Routine Loop',
-      category: 'Routine',
-      price: 'Rp 25.000 - 90.000',
-      duration: '1-2 jam',
-      joki: '',
-      description: 'Sesi rutin harian untuk menyelesaikan loop dengan cepat dan konsisten.',
-      requirements: ['Akun aktif', 'Target loop', 'Penjadwalan'],
-      tag: 'Daily',
-      status: 'Tersedia'
-    }
-  ],
+  services: [],
   orders: [],
   chats: [],
   orderChats: [],
@@ -676,7 +603,7 @@ function renderDashboard() {
         return;
       }
 
-      renderQrisPayment(order);
+      renderPayOrderUsingSaldo(order);
     });
   });
 
@@ -782,7 +709,7 @@ function renderCustomerOrderChat(orderId) {
   if (hintEl) hintEl.textContent = ' ';
 }
 
-function renderMidtransPayment(order) {
+function renderPayOrderUsingSaldo(order) {
   const amount = Number(order.budget || 0);
   // Try server-based QR generation first
   fetch(`${QRIS_SERVER_URL}/create-qris`, {
