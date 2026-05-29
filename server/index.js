@@ -44,7 +44,64 @@ async function updateOrderInState(orderId, updater) {
   return updated;
 }
 
-// Create a simple QRIS payload and return a QR code image (data URL)
+// Midtrans Snap create payment (returns snapToken)
+// Note: This implementation focuses on updating order status via webhook.
+// You still need to configure Midtrans server URL/webhook URL in Midtrans console.
+app.post('/midtrans/create-snap', async (req, res) => {
+  const { orderId, amount, description } = req.body || {};
+  if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
+
+  try {
+    // Midtrans SDK is not included in this repo; implement minimal token request via REST.
+    // You can later replace this with official midtrans-node client.
+    const fetch = global.fetch || (await import('node-fetch')).default;
+
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+    if (!serverKey) {
+      // Fallback token for local demo
+      return res.json({ snapToken: `DEMO_${orderId}`, redirectUrl: null });
+    }
+
+    // Basic snap request
+    const payload = {
+      transaction_details: {
+        order_id: orderId,
+        gross_amount: amount
+      },
+      credit_card: { secure: true },
+      customer_details: {
+        // optional; you can enrich from order payload
+        first_name: 'Customer',
+        email: 'customer@example.com'
+      },
+      // webhook callback will be configured in Midtrans console
+      // for now, snapToken will be enough
+      // item_details: [ ... ]
+    };
+
+    const auth = Buffer.from(`${serverKey}:`).toString('base64');
+    const snapRes = await fetch('https://app.midtrans.com/snap/v1/transactions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await snapRes.json();
+    if (!data || !data.token) {
+      return res.status(500).json({ error: 'Failed to create midtrans snap' });
+    }
+
+    return res.json({ snapToken: data.token });
+  } catch (err) {
+    console.error('midtrans create-snap error', err);
+    return res.status(500).json({ error: 'midtrans create-snap failed' });
+  }
+});
+
+// legacy QRIS endpoint kept for backward compatibility
 app.post('/create-qris', async (req, res) => {
   const { orderId, amount, description } = req.body || {};
   if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
@@ -74,6 +131,42 @@ app.post('/create-qris', async (req, res) => {
 });
 
 // Webhook endpoint for payment provider to notify of completed payments
+// Midtrans webhook endpoint
+// Expecting payload that includes:
+// - order_id (preferred)
+// - transaction_status or transaction_status-like field
+// This endpoint will map to order.paymentStatus.
+app.post('/midtrans/webhook', async (req, res) => {
+  const payload = req.body || {};
+
+  const orderId = payload.order_id || payload.orderId;
+  const txStatus = payload.transaction_status || payload.status_code || payload.transactionStatus;
+  if (!orderId) return res.status(400).json({ error: 'Missing order_id' });
+
+  try {
+    const success = ['capture', 'settlement', 'paid', 'success'].includes(String(txStatus || '').toLowerCase());
+
+    await updateOrderInState(orderId, (o) => {
+      if (success) {
+        return {
+          ...o,
+          paymentStatus: 'Dibayar',
+          paidAt: new Date().toISOString(),
+          paymentMethod: 'MIDTRANS',
+          paymentInfo: payload
+        };
+      }
+      return { ...o, paymentStatus: 'Belum Dibayar' };
+    });
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error('midtrans webhook error', err);
+    return res.status(500).json({ error: 'internal' });
+  }
+});
+
+// legacy webhook endpoint for QRIS
 app.post('/webhook', async (req, res) => {
   const payload = req.body || {};
   const { orderId, status } = payload;

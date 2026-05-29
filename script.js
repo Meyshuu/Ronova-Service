@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'web-joki-db';
+ const STORAGE_KEY = 'web-joki-db';
 const AUTH_KEY = 'web-joki-auth';
 const APP_VERSION = 'v1';
 
@@ -614,6 +614,8 @@ function renderDashboard() {
     </div>
   `;
   document.getElementById('userBalance').textContent = formatCurrency(balance);
+  document.getElementById('balanceMessage').textContent = 'Pembayaran dilakukan lewat Midtrans Snap. Klik Bayar via Midtrans untuk memproses pembayaran.';
+
   document.getElementById('balanceMessage').textContent = 'Pembayaran dilakukan lewat QRIS custom. Klik Bayar via QRIS untuk memproses pembayaran.';
 
   const userOrders = db.orders.filter((order) => order.userId === persistedUser.id);
@@ -739,7 +741,7 @@ function renderDashboard() {
   }
 }
 
-function renderQrisPayment(order) {
+function renderMidtransPayment(order) {
   const amount = Number(order.budget || 0);
   // Try server-based QR generation first
   fetch(`${QRIS_SERVER_URL}/create-qris`, {
