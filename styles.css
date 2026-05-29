@@ -135,6 +135,19 @@ body::before {
   justify-content: space-between;
   gap: 10px;
 }
+
+.topup-row {
+  margin-top: 12px;
+}
+
+.topup-row label {
+  margin: 0;
+}
+
+.topup-row input {
+  width: 100%;
+}
+
 .section-title { margin: 0; font-size: 1.02rem; font-weight: 700; }
 .section-subtitle { margin: 4px 0 0 0; color: var(--text-soft); font-size: 0.78rem; }
 .search-box { display: flex; align-items: center; }

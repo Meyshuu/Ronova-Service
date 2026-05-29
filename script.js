@@ -1745,6 +1745,17 @@ function attachEvents() {
     if (fileEl) fileEl.disabled = disabled;
     custMsgInput.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan...';
   }
+
+  // top up saldo (demo)
+  const topUpBtn = document.getElementById('topUpBtn');
+  const topUpAmountEl = document.getElementById('topUpAmount');
+  if (topUpBtn && topUpAmountEl) {
+    topUpBtn.addEventListener('click', () => {
+      const amt = topUpAmountEl.value;
+      topUpBalance(amt);
+      topUpAmountEl.value = '';
+    });
+  }
 }
 
 async function startApp() {
@@ -1793,6 +1804,30 @@ function showToast(message, type) {
     toast.addEventListener('animationend', () => toast.remove(), { once: true });
   }, timeout);
 }
+
+function topUpBalance(amount) {
+  const user = getCurrentUser();
+  if (!user || user.role !== 'user') {
+    return alert('Akses hanya untuk pengguna.');
+  }
+
+  const persistedUser = db.users.find((entry) => entry.id === user.id);
+  if (!persistedUser) {
+    return alert('User tidak ditemukan.');
+  }
+
+  const finalAmount = Number(amount);
+  if (!Number.isFinite(finalAmount) || finalAmount < 1000) {
+    return alert('Nominal top up minimal 1000 IDR.');
+  }
+
+  // Simple demo: top up langsung menambah saldo aktif
+  persistedUser.balance = Number(persistedUser.balance || 0) + finalAmount;
+  persistData();
+  renderAll();
+  showToast(`Top up berhasil. Saldo bertambah ${formatCurrency(finalAmount)}.`, 'success');
+}
+
 
 // Replace native alerts with toast (confirm remains native)
 (function patchAlertsToToasts() {
