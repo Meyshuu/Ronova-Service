@@ -1800,5 +1800,39 @@ async function startApp() {
   navigateTo(defaultView);
 }
 
+function _toastTypeFromMessage(message) {
+  const msg = String(message || '').toLowerCase();
+  const isError = /(gagal|tidak|error|invalid|bukan ditemukan|belum)/.test(msg);
+  if (isError) return 'error';
+  const isSuccess = /(berhasil|terkonfirmasi|dikonfirmasi|ditandai|selesai|sukses|aktif|tepat)/.test(msg);
+  if (isSuccess) return 'success';
+  return 'info';
+}
+
+function showToast(message, type) {
+  const container = document.getElementById('toastContainer');
+  if (!container) return;
+
+  const toast = document.createElement('div');
+  toast.className = `toast ${type || _toastTypeFromMessage(message)}`;
+  toast.textContent = String(message || '');
+  container.appendChild(toast);
+
+  const timeout = 2600;
+  window.setTimeout(() => {
+    toast.classList.add('hide');
+    toast.addEventListener('animationend', () => toast.remove(), { once: true });
+  }, timeout);
+}
+
+// Replace native alerts with toast (confirm remains native)
+(function patchAlertsToToasts() {
+  const oldAlert = window.alert;
+  window.alert = function (msg) {
+    showToast(msg, _toastTypeFromMessage(msg));
+    return undefined;
+  };
+})();
+
 startApp();
 

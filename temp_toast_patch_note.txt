@@ -1,0 +1,1 @@
+Toast implementation planned: add #toastContainer, CSS, and showToast() replacing alert() with auto-mapping success/error/info by keywords.

@@ -252,6 +252,49 @@ form textarea { resize: vertical; min-height: 88px; }
 .admin-orders-grid { display: grid; grid-template-columns: 1.35fr 0.85fr; gap: 16px; }
 .credential-note { margin-top: 12px; color: var(--text-soft); font-size: 0.72rem; }
 
+.toast-container {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.toast {
+  min-width: 260px;
+  max-width: 420px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(93,111,157,0.26);
+  background: rgba(6, 10, 18, 0.92);
+  box-shadow: var(--shadow);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.35;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  animation: toast-in 180ms ease-out forwards;
+}
+
+.toast.success { border-color: rgba(73,222,158,0.4); }
+.toast.error { border-color: rgba(255,127,139,0.45); }
+.toast.info { border-color: rgba(98,212,255,0.35); }
+
+@keyframes toast-in {
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes toast-out {
+  to { opacity: 0; transform: translateY(-8px) scale(0.98); }
+}
+
+.toast.hide {
+  animation: toast-out 220ms ease-in forwards;
+}
+
 @media (max-width: 900px) {
   .topbar { border-radius: 22px; align-items: flex-start; }
   .service-grid { grid-template-columns: 1fr; }
