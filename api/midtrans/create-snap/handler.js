@@ -1,4 +1,4 @@
-import admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
 // NOTE: For Vercel runtime, we use Fetch API and environment vars.
 // Ensure you set MIDTRANS_SERVER_KEY and (optionally) Firebase service credentials.
@@ -6,7 +6,6 @@ import admin from 'firebase-admin';
 function initFirebase() {
   if (!admin.apps.length) {
     try {
-      // If deployed on Vercel, you can set GOOGLE_APPLICATION_CREDENTIALS or use application default creds.
       admin.initializeApp();
     } catch {
       admin.initializeApp();
@@ -15,10 +14,10 @@ function initFirebase() {
   return admin.firestore();
 }
 
-export async function createSnapHandler(req, res) {
+async function createSnapHandler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { orderId, amount, description } = req.body || {};
+  const { orderId, amount } = req.body || {};
   if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
 
   // Demo fallback if MIDTRANS_SERVER_KEY is missing
@@ -62,4 +61,7 @@ export async function createSnapHandler(req, res) {
     return res.status(500).json({ error: 'midtrans create-snap failed' });
   }
 }
+
+module.exports = { createSnapHandler };
+
 

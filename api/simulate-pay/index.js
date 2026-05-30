@@ -1,4 +1,4 @@
-import admin from 'firebase-admin';
+const admin = require('firebase-admin');
 
 function initFirebase() {
   if (!admin.apps.length) {
@@ -7,7 +7,7 @@ function initFirebase() {
   return admin.firestore();
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
   const { orderId } = req.body || {};
   if (!orderId) return res.status(400).json({ error: 'Missing orderId' });
@@ -61,5 +61,6 @@ export default async function handler(req, res) {
 
   await docRef.set({ ...state, users, topUps });
   return res.json({ ok: true, topUp: topUps[tIdx], applied: true });
-}
+};
+
 

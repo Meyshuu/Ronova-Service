@@ -1,6 +1,7 @@
-import { createSnapHandler } from './handler.js';
+const { createSnapHandler } = require('./handler');
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   return createSnapHandler(req, res);
-}
+};
+
 

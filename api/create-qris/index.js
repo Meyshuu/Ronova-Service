@@ -1,5 +1,5 @@
-import admin from 'firebase-admin';
-import QRCode from 'qrcode';
+const admin = require('firebase-admin');
+const QRCode = require('qrcode');
 
 function initFirebase() {
   if (!admin.apps.length) {
@@ -23,7 +23,7 @@ async function updateOrderInState(orderId, updater) {
   return updated;
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
   const { orderId, amount, description } = req.body || {};
@@ -51,5 +51,6 @@ export default async function handler(req, res) {
     console.error('create-qris error', err);
     return res.status(500).json({ error: 'failed to generate qrcode' });
   }
-}
+};
+
 
