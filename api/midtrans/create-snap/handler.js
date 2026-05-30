@@ -55,7 +55,8 @@ async function createSnapHandler(req, res) {
     }
 
     // Midtrans sandbox mode (default)
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || 'Mid-server-NOcgpnNfs7u3hjlplE6LUiM6';
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+
     const useSandbox = String(process.env.MIDTRANS_USE_SANDBOX || 'true').toLowerCase() === 'true';
     const midtransBaseUrl = useSandbox
       ? 'https://app.sandbox.midtrans.com'
