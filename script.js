@@ -1476,6 +1476,22 @@ function registerUser(username, password, name, email, phone) {
 }
 
 function attachEvents() {
+  // Debug + reliable binding for Top Up tombol (karena render dashboard bisa beberapa kali)
+  // Delegation dari document agar handler selalu aktif saat tombol ada.
+  document.addEventListener('click', (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest('#topUpBtn') : null;
+    if (!btn) return;
+    showToast('DEBUG: topUpBtn clicked', 'info');
+    const amtEl = document.getElementById('topUpAmount');
+    const amt = amtEl ? amtEl.value : '';
+    btn.disabled = true;
+    try {
+      topUpBalance(amt);
+    } finally {
+      setTimeout(() => { btn.disabled = false; }, 600);
+    }
+  });
+
   document.getElementById('searchInput').addEventListener('input', () => {
     state.currentPage = 1;
     renderServiceGrid();
