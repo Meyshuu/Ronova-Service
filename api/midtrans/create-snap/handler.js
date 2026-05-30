@@ -14,49 +14,91 @@ function initFirebase() {
   return admin.firestore();
 }
 
+function jsonError(res, status, payload) {
+  try {
+    res.status(status).setHeader('Content-Type', 'application/json');
+  } catch {
+    // ignore
+  }
+  return res.status(status).json(payload);
+}
+
 async function createSnapHandler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
-
-  const { orderId, amount } = req.body || {};
-  if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
-
-  // Demo fallback if MIDTRANS_SERVER_KEY is missing
-  const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
-  if (!serverKey) {
-    return res.json({ snapToken: `DEMO_${orderId}` });
+  // Always respond JSON (important for client parsing)
+  try {
+    res.setHeader('Content-Type', 'application/json');
+  } catch {
+    // ignore
   }
 
-  const payload = {
-    transaction_details: {
-      order_id: orderId,
-      gross_amount: amount
-    },
-    credit_card: { secure: true },
-    customer_details: {
-      first_name: 'Customer',
-      email: 'customer@example.com'
-    }
-  };
-
-  const auth = Buffer.from(`${serverKey}:`).toString('base64');
-
   try {
-    const snapRes = await fetch('https://app.midtrans.com/snap/v1/transactions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Basic ${auth}`
+    if (req.method !== 'POST') {
+      return jsonError(res, 405, { error: 'Method Not Allowed' });
+    }
+
+    const body = req.body || {};
+    const { orderId, amount } = body;
+
+    if (!orderId || !amount) {
+      return jsonError(res, 400, {
+        error: 'orderId and amount required',
+        received: body
+      });
+    }
+
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return jsonError(res, 400, {
+        error: 'amount must be a positive number',
+        amount
+      });
+    }
+
+    // Demo fallback if MIDTRANS_SERVER_KEY is missing
+    const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+    if (!serverKey) {
+      return res.json({ snapToken: `DEMO_${orderId}` });
+    }
+
+    const payload = {
+      transaction_details: {
+        order_id: String(orderId),
+        gross_amount: numericAmount
       },
-      body: JSON.stringify(payload)
-    });
+      credit_card: { secure: true },
+      customer_details: {
+        first_name: 'Customer',
+        email: 'customer@example.com'
+      }
+    };
+
+    const auth = Buffer.from(`${serverKey}:`).toString('base64');
+
+    let snapRes;
+    try {
+      snapRes = await fetch('https://app.midtrans.com/snap/v1/transactions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Basic ${auth}`
+        },
+        body: JSON.stringify(payload)
+      });
+    } catch (fetchErr) {
+      return jsonError(res, 502, {
+        error: 'midtrans request failed',
+        details: fetchErr?.message || String(fetchErr)
+      });
+    }
 
     const rawText = await snapRes.text();
+
     let data = null;
     try {
       data = JSON.parse(rawText);
     } catch {
       // Return JSON even if Midtrans body isn't JSON.
-      return res.status(500).json({
+      return jsonError(res, 500, {
         error: 'Failed to create midtrans snap (non-JSON response)',
         status: snapRes.status,
         raw: rawText.slice(0, 1000)
@@ -65,7 +107,7 @@ async function createSnapHandler(req, res) {
 
     // Midtrans sometimes returns JSON but without token on error.
     if (!data || !data.token) {
-      return res.status(500).json({
+      return jsonError(res, 500, {
         error: 'Failed to create midtrans snap (missing token)',
         status: snapRes.status,
         raw: rawText.slice(0, 1000),
@@ -75,11 +117,16 @@ async function createSnapHandler(req, res) {
 
     return res.json({ snapToken: data.token, status: snapRes.status });
   } catch (err) {
-    console.error('midtrans create-snap error', err);
-    return res.status(500).json({ error: 'midtrans create-snap failed' });
+    // Last resort: ensure JSON
+    console.error('midtrans create-snap error (unhandled)', err);
+    return jsonError(res, 500, {
+      error: 'midtrans create-snap failed (unhandled)',
+      details: err?.message || String(err)
+    });
   }
 }
 
 module.exports = { createSnapHandler };
+
 
 
