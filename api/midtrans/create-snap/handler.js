@@ -126,7 +126,7 @@ async function createSnapHandler(req, res) {
       });
     }
 
-    return res.json({ snapToken: data.token, status: snapRes.status });
+    return res.json({ snapToken: data.token, status: snapRes.status, useSandbox });
   } catch (err) {
     // Last resort: ensure JSON
     console.error('midtrans create-snap error (unhandled)', err);

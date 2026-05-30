@@ -1884,8 +1884,7 @@ function topUpBalance(amount) {
         if (!ok) return;
 
         // Open Midtrans Snap payment page (harus konsisten dengan backend useSandbox)
-        const useSandbox = String(process?.env?.MIDTRANS_USE_SANDBOX || 'true')
-          .toLowerCase() === 'true';
+        const useSandbox = data.useSandbox !== false; // default true
         const baseUrl = useSandbox
           ? 'https://app.sandbox.midtrans.com'
           : 'https://app.midtrans.com';
