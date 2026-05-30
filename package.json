@@ -8,6 +8,8 @@
     "deploy:functions": "cd functions && npx firebase-tools deploy --only functions --project web-joki-216fc"
   },
   "dependencies": {
-    "firebase": "^12.13.0"
+    "firebase": "^12.13.0",
+    "firebase-admin": "^11.10.0"
   }
 }
+
