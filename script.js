@@ -1866,13 +1866,13 @@ function topUpBalance(amount) {
       // Avoid JSON parse crash on 404/HTML responses
       const text = await r.text();
       try {
-        return { ok: r.ok, json: JSON.parse(text) };
+        return JSON.parse(text);
       } catch {
-        return { ok: r.ok, json: null, text };
+        return { error: 'Invalid JSON response', text };
       }
     })
-      .then((r) => r.json())
       .then((data) => {
+
         if (!data || !data.snapToken) {
           throw new Error(data?.error || 'Failed create snapToken');
         }
