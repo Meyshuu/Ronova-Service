@@ -1883,27 +1883,12 @@ function topUpBalance(amount) {
         const ok = window.confirm('Simulasikan pembayaran Top Up (uji UI & saldo)?');
         if (!ok) return;
 
-        return fetch(`${QRIS_SERVER_URL}/simulate-pay`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ orderId: snapOrderId })
-        }).then((rr) => rr.json()).then(() => {
-          showToast(`Top up berhasil! Saldo +${formatCurrency(finalAmount)} (SIMULASI).`, 'success');
-          const tUps = db.topUps || [];
-          const tIdx = tUps.findIndex((t) => t.id === topUpId);
-          if (tIdx !== -1) {
-            tUps[tIdx] = { ...tUps[tIdx], status: 'paid', provider: 'MIDTRANS_SIM', applied: true, paidAt: new Date().toISOString() };
-          }
-          db.topUps = tUps;
-          const users = db.users || [];
-          const uIdx = users.findIndex((u) => u.id === persistedUser.id);
-          if (uIdx !== -1) {
-            users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + finalAmount };
-          }
-          db.users = users;
-          persistData();
-          renderAll();
-        });
+        // Open Midtrans Snap payment page.
+        // Note: This demo doesn't receive Midtrans webhook automatically,
+        // so saldo update is done via your existing webhook simulation logic (if any).
+        window.open(`https://app.midtrans.com/snap/v1/transactions/${encodeURIComponent(data.snapToken)}`, '_blank');
+        showToast('Midtrans Sandbox dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
+
       })
       .catch((err) => {
         // network error / exception sebelum chain selesai
