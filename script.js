@@ -1863,7 +1863,6 @@ function topUpBalance(amount) {
         description: `Top up saldo ${persistedUser.username}`
       })
     }).then(async (r) => {
-      // Avoid JSON parse crash on 404/HTML responses
       const text = await r.text();
       try {
         return { ok: r.ok, status: r.status, json: JSON.parse(text) };
@@ -1874,13 +1873,12 @@ function topUpBalance(amount) {
       .then((wrapped) => {
         const data = wrapped?.json || {};
         if (!wrapped?.ok || !data || !data.snapToken) {
-          throw new Error(data?.error || `create-snap failed (HTTP ${wrapped?.status || '??'})`);
+          const errMsg = data?.error || `create-snap failed (HTTP ${wrapped?.status || '??'})`;
+          // tampilkan toast sebelum throw agar UI tidak "diam"
+          showToast(`Top up gagal: ${errMsg}`, 'error');
+          throw new Error(errMsg);
         }
 
-
-        // Midtrans snap not integrated in this demo UI.
-        // For testing, we open Midtrans payment using a simple redirect-like flow is not available.
-        // Instead, we provide a manual "simulate paid" call via backend.
         showToast('SnapToken dibuat. Untuk testing, klik OK untuk simulasi paid.', 'info');
         const ok = window.confirm('Simulasikan pembayaran Top Up (uji UI & saldo)?');
         if (!ok) return;
@@ -1891,9 +1889,6 @@ function topUpBalance(amount) {
           body: JSON.stringify({ orderId: snapOrderId })
         }).then((rr) => rr.json()).then(() => {
           showToast(`Top up berhasil! Saldo +${formatCurrency(finalAmount)} (SIMULASI).`, 'success');
-          // Simulate-pay updates only order paymentStatus in server/index.js,
-          // saldo top-up dibutuhkan dari webhook.
-          // Karena testing sandbox, kita langsung apply saldo di client setelah simulate-pay.
           const tUps = db.topUps || [];
           const tIdx = tUps.findIndex((t) => t.id === topUpId);
           if (tIdx !== -1) {
@@ -1909,6 +1904,12 @@ function topUpBalance(amount) {
           persistData();
           renderAll();
         });
+      })
+      .catch((err) => {
+        // network error / exception sebelum chain selesai
+        showToast(`Top up gagal: ${err?.message || 'network error'}`, 'error');
+        console.error('Top up create-snap error:', err);
+        throw err;
       });
   } catch (e) {
     console.warn(e);
