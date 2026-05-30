@@ -58,9 +58,11 @@ async function createSnapHandler(req, res) {
     const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
 
     const useSandbox = String(process.env.MIDTRANS_USE_SANDBOX || 'true').toLowerCase() === 'true';
+    // Pastikan FE membuka URL yang sesuai dengan ini
     const midtransBaseUrl = useSandbox
       ? 'https://app.sandbox.midtrans.com'
       : 'https://app.midtrans.com';
+
 
     // Demo fallback if MIDTRANS_SERVER_KEY is missing
     if (!serverKey) {

@@ -1883,11 +1883,16 @@ function topUpBalance(amount) {
         const ok = window.confirm('Simulasikan pembayaran Top Up (uji UI & saldo)?');
         if (!ok) return;
 
-        // Open Midtrans Snap payment page.
-        // Note: This demo doesn't receive Midtrans webhook automatically,
-        // so saldo update is done via your existing webhook simulation logic (if any).
-        window.open(`https://app.midtrans.com/snap/v1/transactions/${encodeURIComponent(data.snapToken)}`, '_blank');
-        showToast('Midtrans Sandbox dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
+        // Open Midtrans Snap payment page (harus konsisten dengan backend useSandbox)
+        const useSandbox = String(process?.env?.MIDTRANS_USE_SANDBOX || 'true')
+          .toLowerCase() === 'true';
+        const baseUrl = useSandbox
+          ? 'https://app.sandbox.midtrans.com'
+          : 'https://app.midtrans.com';
+
+        window.open(`${baseUrl}/snap/v1/transactions/${encodeURIComponent(data.snapToken)}`, '_blank');
+        showToast('Midtrans Snap dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
+
 
       })
       .catch((err) => {
