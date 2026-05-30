@@ -45,8 +45,9 @@ module.exports = async function handler(req, res) {
         ...orders[idxOrder],
         paymentStatus: 'Dibayar',
         paidAt: new Date().toISOString(),
-        paymentMethod: 'SIMULATED'
-      };
+      paymentMethod: 'MIDTRANS'
+    };
+
       await docRef.set({ ...state, orders });
       return res.json({ ok: true, order: orders[idxOrder] });
     }
