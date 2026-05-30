@@ -1746,17 +1746,9 @@ function attachEvents() {
     custMsgInput.placeholder = disabled ? 'Chat terkunci karena order selesai.' : 'Tulis pesan...';
   }
 
-  // top up saldo (demo)
-  const topUpBtn = document.getElementById('topUpBtn');
-  const topUpAmountEl = document.getElementById('topUpAmount');
-  if (topUpBtn && topUpAmountEl) {
-    topUpBtn.addEventListener('click', () => {
-      const amt = topUpAmountEl.value;
-      topUpBalance(amt);
-      topUpAmountEl.value = '';
-    });
-  }
+  // top up saldo: pasang listener di renderDashboard agar tombol selalu ada saat dashboard aktif.
 }
+
 
 async function startApp() {
   await initializeFirebase();
