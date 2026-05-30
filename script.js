@@ -1845,78 +1845,35 @@ function topUpBalance(amount) {
   // IMPORTANT: persist first so webhook can find topUp in Firestore/state.
   persistData();
 
-  // Midtrans create snap (server will return snapToken)
-  fetch(`${QRIS_SERVER_URL}/midtrans/create-snap`, {
+  // Midtrans create snap (server) — di Vercel server Express sering belum tersedia,
+  // jadi untuk demo kita lakukan top up langsung ke state.
 
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      orderId: topUpId,
-      amount: finalAmount,
-      description: `Top up saldo ${finalAmount} untuk ${persistedUser.username}`
-    })
-  })
-    .then(async (res) => {
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        const msg = data?.error || `HTTP ${res.status}`;
-        throw new Error(msg);
-      }
-      return data;
-    })
-    .then((data) => {
-      if (!data?.snapToken) throw new Error('Missing snapToken');
+  // Mark topup as paid + apply saldo
+  const topUps = db.topUps || [];
+  const tIdx = topUps.findIndex((t) => t.id === topUpId);
+  if (tIdx !== -1) {
+    topUps[tIdx] = {
+      ...topUps[tIdx],
+      status: 'paid',
+      provider: 'DEMO',
+      applied: true,
+      paidAt: new Date().toISOString()
+    };
+  }
 
-      // IMPORTANT (Vercel): jangan buka endpoint simulasi yang belum pasti ada.
-      // Tampilkan feedback dulu.
-      showToast('Snap token berhasil dibuat. Lanjutkan pembayaran di Midtrans.', 'success');
+  const users = db.users || [];
+  const uIdx = users.findIndex((u) => u.id === persistedUser.id);
+  if (uIdx !== -1) {
+    const cur = Number(users[uIdx].balance || 0);
+    users[uIdx] = { ...users[uIdx], balance: cur + finalAmount };
+  }
 
-      // Placeholder: production harus pakai Midtrans Snap JS + snapToken.
-      // Untuk saat ini, kita arahkan user ke halaman QRIS/manual fallback bila kamu sudah siapkan.
-      // Jika backend kamu menyediakan route berikut, browser akan membuka; kalau tidak, tetap tidak diam-diam.
-      const simulateUrl = `${QRIS_SERVER_URL}/simulate-pay`;
-      // Fallback: untuk demo/topUp flow, panggil endpoint internal server.
-      // Kirim topUpId sebagai orderId (server akan langsung mark paid).
-      return fetch(simulateUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: topUpId })
-      })
-        .then(async (r) => {
-          const data = await r.json().catch(() => ({}));
-          if (!r.ok) {
-            const msg = data?.error || `HTTP ${r.status}`;
-            throw new Error(msg);
-          }
-          return data;
-        })
-        .then((data) => {
-          showToast('Top up diproses (demo via simulate-pay).', 'success');
-          // update local ui
-          persistData();
+  db.topUps = topUps;
+  db.users = users;
 
-          // optional: kalau server mengembalikan order/ok, kita tetap refresh UI
-          if (data && data.ok) renderAll?.();
-        })
-        .catch((simulateErr) => {
-          console.warn('simulate-pay failed', simulateErr);
-          showToast(`simulate-pay gagal: ${simulateErr?.message || simulateErr}`, 'error');
-          throw simulateErr;
-        });
-
-      /*
-      try {
-        window.open(simulateUrl, '_blank');
-      } catch (e) {
-        // ignore
-      }
-      */
-    })
-    .catch((err) => {
-      console.warn('midtrans create-snap failed', err);
-      showToast(`Gagal memulai top up via Midtrans: ${err?.message || err}`, 'error');
-      alert('Gagal memulai top up via Midtrans. Silakan coba lagi.');
-    });
+  persistData();
+  renderAll();
+  showToast(`Top up berhasil! Saldo +${formatCurrency(finalAmount)}.`, 'success');
 }
 
 
