@@ -1847,22 +1847,38 @@ function topUpBalance(amount) {
       description: `Top up saldo ${finalAmount} untuk ${persistedUser.username}`
     })
   })
-    .then((res) => res.json())
-    .then((data) => {
-      if (data?.snapToken) {
-        // Minimal demo: open a modal-like page; production: use Midtrans Snap script.
-        // For now we just open a new tab that instructs user to pay.
-        window.open(`${QRIS_SERVER_URL}/midtrans/simulate/${encodeURIComponent(topUpId)}`, '_blank');
-        showToast('Top up diproses. Lakukan pembayaran sampai selesai.', 'info');
-        return;
+    .then(async (res) => {
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error || `HTTP ${res.status}`;
+        throw new Error(msg);
       }
-      throw new Error('Missing snapToken');
+      return data;
+    })
+    .then((data) => {
+      if (!data?.snapToken) throw new Error('Missing snapToken');
+
+      // IMPORTANT (Vercel): jangan buka endpoint simulasi yang belum pasti ada.
+      // Tampilkan feedback dulu.
+      showToast('Snap token berhasil dibuat. Lanjutkan pembayaran di Midtrans.', 'success');
+
+      // Placeholder: production harus pakai Midtrans Snap JS + snapToken.
+      // Untuk saat ini, kita arahkan user ke halaman QRIS/manual fallback bila kamu sudah siapkan.
+      // Jika backend kamu menyediakan route berikut, browser akan membuka; kalau tidak, tetap tidak diam-diam.
+      const simulateUrl = `${QRIS_SERVER_URL}/midtrans/simulate/${encodeURIComponent(topUpId)}`;
+      try {
+        window.open(simulateUrl, '_blank');
+      } catch (e) {
+        // ignore
+      }
     })
     .catch((err) => {
       console.warn('midtrans create-snap failed', err);
+      showToast(`Gagal memulai top up via Midtrans: ${err?.message || err}`, 'error');
       alert('Gagal memulai top up via Midtrans. Silakan coba lagi.');
     });
 }
+
 
 
 
