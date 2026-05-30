@@ -50,21 +50,30 @@ async function createSnapHandler(req, res) {
       body: JSON.stringify(payload)
     });
 
-    // Midtrans kadang mengembalikan plain text/HTML saat error.
-    // Pastikan respons yang kita kirim ke frontend selalu JSON.
     const rawText = await snapRes.text();
-    let data;
+    let data = null;
     try {
       data = JSON.parse(rawText);
     } catch {
-      return res.status(500).json({ error: 'Failed to create midtrans snap', raw: rawText.slice(0, 500) });
+      // Return JSON even if Midtrans body isn't JSON.
+      return res.status(500).json({
+        error: 'Failed to create midtrans snap (non-JSON response)',
+        status: snapRes.status,
+        raw: rawText.slice(0, 1000)
+      });
     }
 
+    // Midtrans sometimes returns JSON but without token on error.
     if (!data || !data.token) {
-      return res.status(500).json({ error: 'Failed to create midtrans snap', raw: rawText.slice(0, 500) });
+      return res.status(500).json({
+        error: 'Failed to create midtrans snap (missing token)',
+        status: snapRes.status,
+        raw: rawText.slice(0, 1000),
+        midtrans: data
+      });
     }
 
-    return res.json({ snapToken: data.token });
+    return res.json({ snapToken: data.token, status: snapRes.status });
   } catch (err) {
     console.error('midtrans create-snap error', err);
     return res.status(500).json({ error: 'midtrans create-snap failed' });
