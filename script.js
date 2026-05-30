@@ -1881,17 +1881,36 @@ function topUpBalance(amount) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: topUpId })
-      }).then(() => {
-        showToast('Top up diproses (demo via simulate-pay).', 'success');
-        // update local ui
-        persistData();
-      });
+      })
+        .then(async (r) => {
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const msg = data?.error || `HTTP ${r.status}`;
+            throw new Error(msg);
+          }
+          return data;
+        })
+        .then((data) => {
+          showToast('Top up diproses (demo via simulate-pay).', 'success');
+          // update local ui
+          persistData();
 
+          // optional: kalau server mengembalikan order/ok, kita tetap refresh UI
+          if (data && data.ok) renderAll?.();
+        })
+        .catch((simulateErr) => {
+          console.warn('simulate-pay failed', simulateErr);
+          showToast(`simulate-pay gagal: ${simulateErr?.message || simulateErr}`, 'error');
+          throw simulateErr;
+        });
+
+      /*
       try {
         window.open(simulateUrl, '_blank');
       } catch (e) {
         // ignore
       }
+      */
     })
     .catch((err) => {
       console.warn('midtrans create-snap failed', err);
