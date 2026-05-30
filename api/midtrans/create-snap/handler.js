@@ -50,9 +50,18 @@ async function createSnapHandler(req, res) {
       body: JSON.stringify(payload)
     });
 
-    const data = await snapRes.json();
+    // Midtrans kadang mengembalikan plain text/HTML saat error.
+    // Pastikan respons yang kita kirim ke frontend selalu JSON.
+    const rawText = await snapRes.text();
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return res.status(500).json({ error: 'Failed to create midtrans snap', raw: rawText.slice(0, 500) });
+    }
+
     if (!data || !data.token) {
-      return res.status(500).json({ error: 'Failed to create midtrans snap' });
+      return res.status(500).json({ error: 'Failed to create midtrans snap', raw: rawText.slice(0, 500) });
     }
 
     return res.json({ snapToken: data.token });
