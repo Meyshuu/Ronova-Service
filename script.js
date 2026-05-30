@@ -1866,16 +1866,17 @@ function topUpBalance(amount) {
       // Avoid JSON parse crash on 404/HTML responses
       const text = await r.text();
       try {
-        return JSON.parse(text);
+        return { ok: r.ok, status: r.status, json: JSON.parse(text) };
       } catch {
-        return { error: 'Invalid JSON response', text };
+        return { ok: r.ok, status: r.status, json: { error: 'Invalid JSON response', text }, raw: text };
       }
     })
-      .then((data) => {
-
-        if (!data || !data.snapToken) {
-          throw new Error(data?.error || 'Failed create snapToken');
+      .then((wrapped) => {
+        const data = wrapped?.json || {};
+        if (!wrapped?.ok || !data || !data.snapToken) {
+          throw new Error(data?.error || `create-snap failed (HTTP ${wrapped?.status || '??'})`);
         }
+
 
         // Midtrans snap not integrated in this demo UI.
         // For testing, we open Midtrans payment using a simple redirect-like flow is not available.
