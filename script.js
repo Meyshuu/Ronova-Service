@@ -1859,6 +1859,14 @@ function topUpBalance(amount) {
         amount: finalAmount,
         description: `Top up saldo ${persistedUser.username}`
       })
+    }).then(async (r) => {
+      // Avoid JSON parse crash on 404/HTML responses
+      const text = await r.text();
+      try {
+        return { ok: r.ok, json: JSON.parse(text) };
+      } catch {
+        return { ok: r.ok, json: null, text };
+      }
     })
       .then((r) => r.json())
       .then((data) => {
