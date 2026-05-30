@@ -1845,35 +1845,10 @@ function topUpBalance(amount) {
   // IMPORTANT: persist first so webhook can find topUp in Firestore/state.
   persistData();
 
-  // Midtrans create snap (server) — di Vercel server Express sering belum tersedia,
-  // jadi untuk demo kita lakukan top up langsung ke state.
-
-  // Mark topup as paid + apply saldo
-  const topUps = db.topUps || [];
-  const tIdx = topUps.findIndex((t) => t.id === topUpId);
-  if (tIdx !== -1) {
-    topUps[tIdx] = {
-      ...topUps[tIdx],
-      status: 'paid',
-      provider: 'DEMO',
-      applied: true,
-      paidAt: new Date().toISOString()
-    };
-  }
-
-  const users = db.users || [];
-  const uIdx = users.findIndex((u) => u.id === persistedUser.id);
-  if (uIdx !== -1) {
-    const cur = Number(users[uIdx].balance || 0);
-    users[uIdx] = { ...users[uIdx], balance: cur + finalAmount };
-  }
-
-  db.topUps = topUps;
-  db.users = users;
-
-  persistData();
-  renderAll();
-  showToast(`Top up berhasil! Saldo +${formatCurrency(finalAmount)}.`, 'success');
+  // Midtrans create snap (server) — butuh backend (Firebase Functions / Express) aktif.
+  // Karena environment vars MIDTRANS belum diset, kita tampilkan error dulu dan TIDAK menambah saldo.
+  showToast('Top up gagal: MIDTRANS belum dikonfigurasi di backend (serverless env vars).', 'error');
+  throw new Error('MIDTRANS_SERVER_KEY missing');
 }
 
 
