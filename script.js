@@ -1481,7 +1481,7 @@ function attachEvents() {
   document.addEventListener('click', (e) => {
     const btn = e.target && e.target.closest ? e.target.closest('#topUpBtn') : null;
     if (!btn) return;
-    showToast('DEBUG: topUpBtn clicked', 'info');
+
     const amtEl = document.getElementById('topUpAmount');
     const amt = amtEl ? amtEl.value : '';
     btn.disabled = true;
@@ -1901,7 +1901,7 @@ function topUpBalance(amount) {
   } catch (e) {
     console.warn(e);
     showToast(`Top up gagal: ${e?.message || 'backend error'}`, 'error');
-    throw e;
+
   }
 }
 
