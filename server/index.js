@@ -245,23 +245,110 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Simulate payment (for local testing) — directly mark an order as paid
+// Simulate payment (for local testing)
+// - If orderId matches orders[].id => mark order paid
+// - Else if orderId matches topUps[].id => mark topUp paid + apply saldo
 app.post('/simulate-pay', async (req, res) => {
   const { orderId } = req.body || {};
   if (!orderId) return res.status(400).json({ error: 'Missing orderId' });
+
   try {
-    const updated = await updateOrderInState(orderId, (o) => ({
-      ...o,
-      paymentStatus: 'Dibayar',
-      paidAt: new Date().toISOString(),
-      paymentMethod: 'SIMULATED'
-    }));
-    return res.json({ ok: true, order: updated });
+    // 1) try update order first
+    try {
+      const updated = await updateOrderInState(orderId, (o) => ({
+        ...o,
+        paymentStatus: 'Dibayar',
+        paidAt: new Date().toISOString(),
+        paymentMethod: 'SIMULATED'
+      }));
+      return res.json({ ok: true, order: updated, applied: false });
+    } catch (e) {
+      // ignore and try topUps below
+    }
+
+    // 2) try update topUps + apply saldo
+    const docRef = db.doc('appState/web-joki');
+    const snap = await docRef.get();
+    if (!snap.exists) return res.status(404).json({ error: 'App state not found' });
+
+    const state = snap.data() || {};
+    const topUps = Array.isArray(state.topUps) ? state.topUps : [];
+    const tIdx = topUps.findIndex((t) => t.id === orderId);
+    if (tIdx === -1) {
+      // Important: if not found as order nor topup, respond 200 so frontend toast can still show message
+      return res.json({ ok: true, skipped: true, reason: 'Not found in orders/topUps' });
+    }
+
+    const topUp = topUps[tIdx];
+    const alreadyApplied = topUp.status === 'paid' && topUp.applied === true;
+
+    topUps[tIdx] = {
+      ...topUp,
+      status: 'paid',
+      provider: 'MIDTRANS_SIM',
+      raw: { simulated: true },
+      applied: true,
+      paidAt: new Date().toISOString()
+    };
+
+    const users = Array.isArray(state.users) ? state.users : [];
+    const uIdx = users.findIndex((u) => u.id === topUp.userId);
+    if (uIdx !== -1 && !alreadyApplied) {
+      const add = Number(topUp.amount || 0);
+      users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + add };
+    }
+
+    await docRef.set({ ...state, users, topUps });
+
+    return res.json({ ok: true, topUp: topUps[tIdx], applied: true });
   } catch (err) {
     console.error('simulate-pay error', err);
     return res.status(500).json({ error: err.message });
   }
 });
+
+// Simulate only topup payment (for local testing)
+app.post('/simulate-topup-pay', async (req, res) => {
+  const { topupId } = req.body || {};
+  if (!topupId) return res.status(400).json({ error: 'Missing topupId' });
+
+  try {
+    const docRef = db.doc('appState/web-joki');
+    const snap = await docRef.get();
+    if (!snap.exists) return res.status(404).json({ error: 'App state not found' });
+
+    const state = snap.data() || {};
+    const topUps = Array.isArray(state.topUps) ? state.topUps : [];
+    const idx = topUps.findIndex((t) => t.id === topupId);
+    if (idx === -1) return res.status(404).json({ error: 'Topup not found' });
+
+    const topUp = topUps[idx];
+    const alreadyApplied = topUp.status === 'paid' && topUp.applied === true;
+
+    topUps[idx] = {
+      ...topUp,
+      status: 'paid',
+      provider: 'MIDTRANS_SIM',
+      raw: { simulated: true },
+      applied: true,
+      paidAt: new Date().toISOString()
+    };
+
+    const users = Array.isArray(state.users) ? state.users : [];
+    const uIdx = users.findIndex((u) => u.id === topUp.userId);
+    if (uIdx !== -1 && !alreadyApplied) {
+      const add = Number(topUp.amount || 0);
+      users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + add };
+    }
+
+    await docRef.set({ ...state, users, topUps });
+    return res.json({ ok: true, topupId, alreadyApplied });
+  } catch (err) {
+    console.error('simulate-topup-pay error', err);
+    return res.status(500).json({ error: err.message || 'internal' });
+  }
+});
+
 
 // Simple view to display stored QR code for an order
 app.get('/qrcode/:orderId', async (req, res) => {
