@@ -1909,7 +1909,7 @@ function topUpBalance(amount) {
         // network error / exception sebelum chain selesai
         showToast(`Top up gagal: ${err?.message || 'network error'}`, 'error');
         console.error('Top up create-snap error:', err);
-        throw err;
+        // jangan rethrow supaya tidak memunculkan Uncaught error di console
       });
   } catch (e) {
     console.warn(e);
