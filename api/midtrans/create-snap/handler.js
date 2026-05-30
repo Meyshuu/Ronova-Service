@@ -54,11 +54,18 @@ async function createSnapHandler(req, res) {
       });
     }
 
-    // Demo fallback if MIDTRANS_SERVER_KEY is missing
+    // Midtrans sandbox mode (default)
     const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
+    const useSandbox = String(process.env.MIDTRANS_USE_SANDBOX || 'true').toLowerCase() === 'true';
+    const midtransBaseUrl = useSandbox
+      ? 'https://app.sandbox.midtrans.com'
+      : 'https://app.midtrans.com';
+
+    // Demo fallback if MIDTRANS_SERVER_KEY is missing
     if (!serverKey) {
       return res.json({ snapToken: `DEMO_${orderId}` });
     }
+
 
     const payload = {
       transaction_details: {
@@ -76,7 +83,8 @@ async function createSnapHandler(req, res) {
 
     let snapRes;
     try {
-      snapRes = await fetch('https://app.midtrans.com/snap/v1/transactions', {
+      snapRes = await fetch(`${midtransBaseUrl}/snap/v1/transactions`, {
+
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
