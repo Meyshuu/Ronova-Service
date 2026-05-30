@@ -1845,10 +1845,64 @@ function topUpBalance(amount) {
   // IMPORTANT: persist first so webhook can find topUp in Firestore/state.
   persistData();
 
-  // Midtrans create snap (server) — butuh backend (Firebase Functions / Express) aktif.
-  // Karena environment vars MIDTRANS belum diset, kita tampilkan error dulu dan TIDAK menambah saldo.
-  showToast('Top up gagal: MIDTRANS belum dikonfigurasi di backend (serverless env vars).', 'error');
-  throw new Error('MIDTRANS_SERVER_KEY missing');
+  // Midtrans create snap (server)
+  // Backend (server/index.js) akan mengembalikan snapToken.
+  // Setelah pembayaran sukses, webhook harus mengupdate order paymentStatus + saldo.
+  try {
+    const snapOrderId = topUpId; // top-up uses its own id as transaction/order_id
+
+    return fetch(`${QRIS_SERVER_URL}/midtrans/create-snap`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: snapOrderId,
+        amount: finalAmount,
+        description: `Top up saldo ${persistedUser.username}`
+      })
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (!data || !data.snapToken) {
+          throw new Error(data?.error || 'Failed create snapToken');
+        }
+
+        // Midtrans snap not integrated in this demo UI.
+        // For testing, we open Midtrans payment using a simple redirect-like flow is not available.
+        // Instead, we provide a manual "simulate paid" call via backend.
+        showToast('SnapToken dibuat. Untuk testing, klik OK untuk simulasi paid.', 'info');
+        const ok = window.confirm('Simulasikan pembayaran Top Up (uji UI & saldo)?');
+        if (!ok) return;
+
+        return fetch(`${QRIS_SERVER_URL}/simulate-pay`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId: snapOrderId })
+        }).then((rr) => rr.json()).then(() => {
+          showToast(`Top up berhasil! Saldo +${formatCurrency(finalAmount)} (SIMULASI).`, 'success');
+          // Simulate-pay updates only order paymentStatus in server/index.js,
+          // saldo top-up dibutuhkan dari webhook.
+          // Karena testing sandbox, kita langsung apply saldo di client setelah simulate-pay.
+          const tUps = db.topUps || [];
+          const tIdx = tUps.findIndex((t) => t.id === topUpId);
+          if (tIdx !== -1) {
+            tUps[tIdx] = { ...tUps[tIdx], status: 'paid', provider: 'MIDTRANS_SIM', applied: true, paidAt: new Date().toISOString() };
+          }
+          db.topUps = tUps;
+          const users = db.users || [];
+          const uIdx = users.findIndex((u) => u.id === persistedUser.id);
+          if (uIdx !== -1) {
+            users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + finalAmount };
+          }
+          db.users = users;
+          persistData();
+          renderAll();
+        });
+      });
+  } catch (e) {
+    console.warn(e);
+    showToast(`Top up gagal: ${e?.message || 'backend error'}`, 'error');
+    throw e;
+  }
 }
 
 
