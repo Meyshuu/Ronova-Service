@@ -45,24 +45,20 @@ async function updateOrderInState(orderId, updater) {
 }
 
 // Midtrans Snap create payment (returns snapToken)
-// Note: This implementation focuses on updating order status via webhook.
-// You still need to configure Midtrans server URL/webhook URL in Midtrans console.
+// Supports both: order payments and balance top-up (client will pass orderId/transactionId in orderId)
 app.post('/midtrans/create-snap', async (req, res) => {
   const { orderId, amount, description } = req.body || {};
   if (!orderId || !amount) return res.status(400).json({ error: 'orderId and amount required' });
 
   try {
-    // Midtrans SDK is not included in this repo; implement minimal token request via REST.
-    // You can later replace this with official midtrans-node client.
     const fetch = global.fetch || (await import('node-fetch')).default;
 
     const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
     if (!serverKey) {
-      // Fallback token for local demo
-      return res.json({ snapToken: `DEMO_${orderId}`, redirectUrl: null });
+      // Local demo fallback: return a token string so frontend can simulate flow.
+      return res.json({ snapToken: `DEMO_${orderId}` });
     }
 
-    // Basic snap request
     const payload = {
       transaction_details: {
         order_id: orderId,
@@ -70,13 +66,11 @@ app.post('/midtrans/create-snap', async (req, res) => {
       },
       credit_card: { secure: true },
       customer_details: {
-        // optional; you can enrich from order payload
         first_name: 'Customer',
         email: 'customer@example.com'
-      },
-      // webhook callback will be configured in Midtrans console
-      // for now, snapToken will be enough
-      // item_details: [ ... ]
+      }
+      // NOTE: webhook callback is configured in Midtrans console.
+      // If you need item_details/metadata, extend here.
     };
 
     const auth = Buffer.from(`${serverKey}:`).toString('base64');
@@ -100,6 +94,7 @@ app.post('/midtrans/create-snap', async (req, res) => {
     return res.status(500).json({ error: 'midtrans create-snap failed' });
   }
 });
+
 
 // legacy QRIS endpoint kept for backward compatibility
 app.post('/create-qris', async (req, res) => {
@@ -130,12 +125,9 @@ app.post('/create-qris', async (req, res) => {
   }
 });
 
-// Webhook endpoint for payment provider to notify of completed payments
 // Midtrans webhook endpoint
-// Expecting payload that includes:
-// - order_id (preferred)
-// - transaction_status or transaction_status-like field
-// This endpoint will map to order.paymentStatus.
+// - If transaction/order_id matches an order -> update order.paymentStatus
+// - If it matches a topup id stored under state.topUps -> update top-up status + apply saldo
 app.post('/midtrans/webhook', async (req, res) => {
   const payload = req.body || {};
 
@@ -146,18 +138,68 @@ app.post('/midtrans/webhook', async (req, res) => {
   try {
     const success = ['capture', 'settlement', 'paid', 'success'].includes(String(txStatus || '').toLowerCase());
 
-    await updateOrderInState(orderId, (o) => {
-      if (success) {
-        return {
-          ...o,
-          paymentStatus: 'Dibayar',
-          paidAt: new Date().toISOString(),
-          paymentMethod: 'MIDTRANS',
-          paymentInfo: payload
-        };
+    // First try: update order.paymentStatus
+    try {
+      await updateOrderInState(orderId, (o) => {
+        if (success) {
+          return {
+            ...o,
+            paymentStatus: 'Dibayar',
+            paidAt: new Date().toISOString(),
+            paymentMethod: 'MIDTRANS',
+            paymentInfo: payload
+          };
+        }
+        return { ...o, paymentStatus: 'Belum Dibayar' };
+      });
+      return res.json({ ok: true });
+    } catch (e) {
+      // ignore: order not found
+    }
+
+    // Second: update topUps and apply balance
+    const docRef = db.doc('appState/web-joki');
+    const snap = await docRef.get();
+    if (!snap.exists) return res.status(404).json({ error: 'App state not found' });
+
+    const state = snap.data() || {};
+    const topUps = Array.isArray(state.topUps) ? state.topUps : [];
+    const idx = topUps.findIndex((t) => t.id === orderId);
+    if (idx === -1) {
+      return res.json({ ok: true });
+    }
+
+    const topUp = topUps[idx];
+    if (!success) {
+      topUps[idx] = { ...topUp, status: 'failed', provider: 'MIDTRANS', raw: payload };
+      await docRef.set({ ...state, topUps });
+      return res.json({ ok: true });
+    }
+
+    // Apply saldo once
+    const alreadyApplied = topUp.status === 'paid' && topUp.applied === true;
+    topUps[idx] = {
+      ...topUp,
+      status: 'paid',
+      provider: 'MIDTRANS',
+      raw: payload,
+      applied: true
+    };
+
+    if (!alreadyApplied) {
+      const userId = topUp.userId;
+      const users = Array.isArray(state.users) ? state.users : [];
+      const uIdx = users.findIndex((u) => u.id === userId);
+      if (uIdx !== -1) {
+        const add = Number(topUp.amount || 0);
+        users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + add };
+        await docRef.set({ ...state, users, topUps });
+      } else {
+        await docRef.set({ ...state, topUps });
       }
-      return { ...o, paymentStatus: 'Belum Dibayar' };
-    });
+    } else {
+      await docRef.set({ ...state, topUps });
+    }
 
     return res.json({ ok: true });
   } catch (err) {
@@ -165,6 +207,7 @@ app.post('/midtrans/webhook', async (req, res) => {
     return res.status(500).json({ error: 'internal' });
   }
 });
+
 
 // legacy webhook endpoint for QRIS
 app.post('/webhook', async (req, res) => {

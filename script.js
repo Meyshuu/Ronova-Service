@@ -1821,12 +1821,49 @@ function topUpBalance(amount) {
     return alert('Nominal top up minimal 1000 IDR.');
   }
 
-  // Simple demo: top up langsung menambah saldo aktif
-  persistedUser.balance = Number(persistedUser.balance || 0) + finalAmount;
+  // Create a topup record (will be applied by webhook after MIDTRANS confirms paid)
+  const topUpId = `topup-${Date.now()}`;
+  db.topUps = db.topUps || [];
+  db.topUps.push({
+    id: topUpId,
+    userId: persistedUser.id,
+    amount: finalAmount,
+    status: 'pending',
+    provider: 'MIDTRANS',
+    createdAt: new Date().toISOString(),
+    applied: false
+  });
+
+  // IMPORTANT: persist first so webhook can find topUp in Firestore/state.
   persistData();
-  renderAll();
-  showToast(`Top up berhasil. Saldo bertambah ${formatCurrency(finalAmount)}.`, 'success');
+
+  // Midtrans create snap (server will return snapToken)
+  fetch(`${QRIS_SERVER_URL}/midtrans/create-snap`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      orderId: topUpId,
+      amount: finalAmount,
+      description: `Top up saldo ${finalAmount} untuk ${persistedUser.username}`
+    })
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data?.snapToken) {
+        // Minimal demo: open a modal-like page; production: use Midtrans Snap script.
+        // For now we just open a new tab that instructs user to pay.
+        window.open(`${QRIS_SERVER_URL}/midtrans/simulate/${encodeURIComponent(topUpId)}`, '_blank');
+        showToast('Top up diproses. Lakukan pembayaran sampai selesai.', 'info');
+        return;
+      }
+      throw new Error('Missing snapToken');
+    })
+    .catch((err) => {
+      console.warn('midtrans create-snap failed', err);
+      alert('Gagal memulai top up via Midtrans. Silakan coba lagi.');
+    });
 }
+
 
 
 // Replace native alerts with toast (confirm remains native)
