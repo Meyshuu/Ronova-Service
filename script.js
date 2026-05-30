@@ -1847,6 +1847,7 @@ function topUpBalance(amount) {
 
   // Midtrans create snap (server will return snapToken)
   fetch(`${QRIS_SERVER_URL}/midtrans/create-snap`, {
+
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -1873,7 +1874,19 @@ function topUpBalance(amount) {
       // Placeholder: production harus pakai Midtrans Snap JS + snapToken.
       // Untuk saat ini, kita arahkan user ke halaman QRIS/manual fallback bila kamu sudah siapkan.
       // Jika backend kamu menyediakan route berikut, browser akan membuka; kalau tidak, tetap tidak diam-diam.
-      const simulateUrl = `${QRIS_SERVER_URL}/midtrans/simulate/${encodeURIComponent(topUpId)}`;
+      const simulateUrl = `${QRIS_SERVER_URL}/simulate-pay`;
+      // Fallback: untuk demo/topUp flow, panggil endpoint internal server.
+      // Kirim topUpId sebagai orderId (server akan langsung mark paid).
+      return fetch(simulateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: topUpId })
+      }).then(() => {
+        showToast('Top up diproses (demo via simulate-pay).', 'success');
+        // update local ui
+        persistData();
+      });
+
       try {
         window.open(simulateUrl, '_blank');
       } catch (e) {
