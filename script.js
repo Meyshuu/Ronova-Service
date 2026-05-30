@@ -18,7 +18,10 @@ const FIREBASE_CONFIG = {
 const FIREBASE_STATE_PATH = 'appState/web-joki';
 let firebaseEnabled = false;
 // Local QRIS server (Express) URL — change if hosted elsewhere
-const QRIS_SERVER_URL = window.location.hostname === 'localhost' ? 'http://localhost:3000' : `${window.location.origin.replace(window.location.pathname, '')}:3000`;
+// On Vercel, backend endpoints should live at /api/* on the same domain.
+const QRIS_SERVER_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:3000'
+  : `${window.location.origin}/api`;
 
 const defaultData = {
   users: [],
