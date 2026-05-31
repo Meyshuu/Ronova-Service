@@ -1892,8 +1892,36 @@ function topUpBalance(amount) {
         const snapToken = data.snapToken;
         // Response Midtrans (create snap) biasanya hanya mengembalikan token.
         // Untuk membuka halaman pembayaran Snap, gunakan endpoint /snap/v1/transactions/{token}.
-        window.open(`${baseUrl}/snap/v2/${encodeURIComponent(snapToken)}`, '_blank');
-        showToast('Midtrans Snap dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
+        try {
+          if (!window.snap || typeof window.snap.pay !== 'function') {
+            throw new Error('Midtrans Snap SDK belum terinisialisasi di browser.');
+          }
+
+          // Buka checkout pakai Snap JS SDK (lebih stabil dari menebak URL transaksi)
+          window.snap.pay(snapToken, {
+            onSuccess: function (result) {
+              console.log('Midtrans onSuccess', result);
+              showToast('Pembayaran sukses. Menunggu webhook mengupdate status...', 'success');
+            },
+            onPending: function (result) {
+              console.log('Midtrans onPending', result);
+              showToast('Pembayaran pending. Menunggu konfirmasi...', 'info');
+            },
+            onError: function (err) {
+              console.error('Midtrans onError', err);
+              showToast('Pembayaran gagal/terjadi error.', 'error');
+            },
+            onClose: function () {
+              showToast('Halaman pembayaran ditutup.', 'info');
+            }
+          });
+        } catch (e) {
+          console.error('snap.pay failed', e);
+          showToast(`Midtrans checkout error: ${e?.message || String(e)}`, 'error');
+          // fallback: tetap coba buka URL (untuk debug)
+          window.open(`${baseUrl}/snap/v2/${encodeURIComponent(snapToken)}`, '_blank');
+        }
+        showToast('Midtrans checkout dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
 
 
 
