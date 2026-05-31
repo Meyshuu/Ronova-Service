@@ -18,12 +18,37 @@ function json(res, status, payload) {
   return res.status(status).json(payload);
 }
 
-function normalizeStatus(status) {
-  const s = String(status || '').toLowerCase();
-  // Midtrans typical fields: transaction_status or transactionStatus
-  // paid/settlement/capture/success usually means money received.
-  const paid = ['capture', 'settlement', 'paid', 'success'].includes(s);
-  return { paid };
+function normalizeStatus(payload) {
+  // Be liberal: Midtrans payloads differ slightly.
+  const candidates = [
+    payload?.transaction_status,
+    payload?.transactionStatus,
+    payload?.status_code,
+    payload?.status,
+    payload?.payment_status,
+    payload?.fraud_status,
+    payload?.transaction_status,
+  ];
+
+  const combined = candidates
+    .filter((v) => v !== undefined && v !== null)
+    .map((v) => String(v).toLowerCase())
+    .join(' ');
+
+  // successful states (typical)
+  const paid = /capture|settlement|paid|success/.test(combined);
+  return { paid, combined };
+}
+
+function extractOrderId(payload) {
+  return (
+    payload?.order_id ||
+    payload?.orderId ||
+    payload?.transaction_id ||
+    payload?.transactionId ||
+    payload?.transaction_details?.order_id ||
+    payload?.transaction_details?.orderId
+  );
 }
 
 async function applyTopupPaid(db, appState, { orderId, payload, amount }) {
@@ -81,7 +106,8 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { error: 'Missing order_id/transaction/orderId' });
     }
 
-    const { paid } = normalizeStatus(payload.transaction_status || payload.status_code || payload.transactionStatus || payload.status);
+    const { paid } = normalizeStatus(payload);
+
     const amount =
       payload.gross_amount ??
       payload.grossAmount ??
