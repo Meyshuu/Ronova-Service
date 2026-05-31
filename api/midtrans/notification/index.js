@@ -2,10 +2,13 @@ const admin = require('firebase-admin');
 
 function initFirebase() {
   if (!admin.apps.length) {
+    // In Vercel functions we may not have GOOGLE_APPLICATION_CREDENTIALS configured.
+    // Use default credential initialization.
     admin.initializeApp();
   }
   return admin.firestore();
 }
+
 
 function json(res, status, payload) {
   try {
