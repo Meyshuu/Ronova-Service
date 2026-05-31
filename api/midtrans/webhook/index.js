@@ -58,7 +58,26 @@ async function applyTopupPaid(db, appState, { orderId, payload, amount }) {
   const state = appState || {};
   const topUps = Array.isArray(state.topUps) ? state.topUps : [];
   const idx = topUps.findIndex((t) => String(t.id) === String(orderId));
-  if (idx === -1) return { applied: false, reason: 'topup not found' };
+  if (idx === -1) {
+    // Persist debug so we can confirm Firestore state is being read correctly.
+    try {
+      await db.doc('appState/web-joki').set(
+        {
+          __midtransDebug: {
+            orderId: String(orderId),
+            topUpsCount: topUps.length,
+            hasTopUps: topUps.length > 0,
+            sampleTopUpIds: topUps.slice(0, 5).map((t) => t?.id),
+            action: 'topup_not_found'
+          }
+        },
+        { merge: true }
+      );
+    } catch {}
+
+    return { applied: false, reason: 'topup not found' };
+  }
+
 
   const topUp = topUps[idx];
 
