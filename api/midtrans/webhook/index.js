@@ -10,6 +10,9 @@ function initFirebase() {
 }
 
 function json(res, status, payload) {
+  // Dev logging (safe in serverless)
+  // Comment out later if noisy.
+
   try {
     res.status(status).setHeader('Content-Type', 'application/json');
   } catch {
@@ -106,7 +109,8 @@ module.exports = async function handler(req, res) {
       return json(res, 400, { error: 'Missing order_id/transaction/orderId' });
     }
 
-    const { paid } = normalizeStatus(payload);
+    const { paid, combined } = normalizeStatus(payload);
+
 
     const amount =
       payload.gross_amount ??
