@@ -60,10 +60,11 @@ async function applyTopupPaid(db, appState, { orderId, payload, amount }) {
   const idx = topUps.findIndex((t) => String(t.id) === String(orderId));
   if (idx === -1) return { applied: false, reason: 'topup not found' };
 
-    const topUp = topUps[idx];
+  const topUp = topUps[idx];
 
-    // If topUp.userId is missing or user not found, we still mark applied
-    // and we DO NOT add saldo (to avoid silent corruption).
+  // If topUp.userId is missing or user not found, we still mark applied
+  // and we DO NOT add saldo (to avoid silent corruption).
+
 
   const alreadyApplied = topUp.status === 'paid' && topUp.applied === true;
 
