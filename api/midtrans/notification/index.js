@@ -113,6 +113,21 @@ module.exports = async function handler(req, res) {
       payload.transaction_details?.order_id ||
       payload.transaction_details?.orderId;
 
+    // Always ping Firestore so we know this endpoint is being hit
+    try {
+      await db.doc('appState/midtransPingLast').set(
+        {
+          at: new Date().toISOString(),
+          orderId: orderId ? String(orderId) : null,
+          transaction_status: payload?.transaction_status ?? payload?.transactionStatus ?? null,
+          payment_status: payload?.payment_status ?? null,
+          status_code: payload?.status_code ?? null,
+        },
+        { merge: true }
+      );
+    } catch {}
+
+
     if (!orderId) {
       return json(res, 400, { error: 'Missing order_id/transaction/orderId' });
     }
