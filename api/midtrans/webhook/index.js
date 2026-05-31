@@ -80,6 +80,11 @@ async function applyTopupPaid(db, appState, { orderId, payload, amount }) {
   if (!alreadyApplied) {
     const users = Array.isArray(state.users) ? state.users : [];
     const uIdx = users.findIndex((u) => String(u.id) === String(topUp.userId));
+
+    // Debug fields to help determine why saldo isn't added
+    const debug = { orderId: String(orderId), topUp: { id: topUp?.id, userId: topUp?.userId, amount: amount ?? topUp?.amount, status: topUp?.status, applied: topUp?.applied } };
+    // persist debug without breaking main flow
+    try { await db.doc('appState/web-joki').set({ ...state, __midtransDebug: debug }, { merge: true }); } catch {}
     if (uIdx !== -1) {
       const add = Number(amount ?? topUp.amount ?? 0);
       users[uIdx] = { ...users[uIdx], balance: Number(users[uIdx].balance || 0) + add };
