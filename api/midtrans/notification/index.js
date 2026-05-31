@@ -125,13 +125,17 @@ module.exports = async function handler(req, res) {
           transaction_status: payload?.transaction_status ?? payload?.transactionStatus ?? null,
           payment_status: payload?.payment_status ?? null,
           status_code: payload?.status_code ?? null,
+          __debug_source: 'api/midtrans/notification'
         },
         { merge: true }
       );
-    } catch {}
+    } catch {
+      // ignore ping failures
+    }
 
-
+    // If orderId missing, still return 400 (notification payload seems always have it)
     if (!orderId) {
+
       return json(res, 400, { error: 'Missing order_id/transaction/orderId' });
     }
 
