@@ -1892,7 +1892,7 @@ function topUpBalance(amount) {
         const snapToken = data.snapToken;
         // Response Midtrans (create snap) biasanya hanya mengembalikan token.
         // Untuk membuka halaman pembayaran Snap, gunakan endpoint /snap/v1/transactions/{token}.
-        window.open(`${baseUrl}/snap/v1/transactions/${encodeURIComponent(snapToken)}`, '_blank');
+        window.open(`${baseUrl}/snap/v1/${encodeURIComponent(snapToken)}`, '_blank');
         showToast('Midtrans Snap dibuka. Lakukan pembayaran, lalu refresh setelah status ter-update.', 'info');
 
 
